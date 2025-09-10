@@ -1,0 +1,40 @@
+services:
+  usuarios-service:
+    build: ./usuarios-service
+    ports: ["8001:8000"]
+    environment:
+      - DATABASE_URL=postgresql://postgres:password123@postgres:5432/certificados
+      - SECRET_KEY=clave-secreta-desarrollo
+      - DEBUG=True
+    depends_on: [postgres]
+
+  cursos-service:
+    build: ./cursos-service  
+    ports: ["8002:8000"]
+    environment:
+      - DATABASE_URL=postgresql://postgres:password123@postgres:5432/certificados
+      - SECRET_KEY=clave-secreta-desarrollo
+      - DEBUG=True
+    depends_on: [postgres]
+
+  certificados-service:
+    build: ./certificados-service
+    ports: ["8003:8000"]
+    environment:
+      - DATABASE_URL=postgresql://postgres:password123@postgres:5432/certificados
+      - SECRET_KEY=clave-secreta-desarrollo
+      - DEBUG=True
+      - SMTP2GO_API_KEY=${SMTP2GO_API_KEY}
+    depends_on: [postgres]
+
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=certificados
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password123
+    ports: ["5433:5432"]
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+
+volumes:
+  postgres_data:

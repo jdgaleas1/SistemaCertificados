@@ -1,0 +1,169 @@
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { 
+  getCursos, 
+  getCurso, 
+  createCurso, 
+  updateCurso, 
+  deleteCurso,
+  getEstudiantesCurso,
+  inscribirEstudiante,
+  importarEstudiantesCSV
+} from '@/lib/api';
+import { 
+  Curso, 
+  CursoCreate, 
+  CursoUpdate, 
+  PaginatedCursosResponse,
+  CursosFilters,
+  EstudiantesCursoResponse,
+  CSVImportResponse
+} from '@/types/cursos';
+
+export function useCursos(filters?: CursosFilters) {
+  const { data: session } = useSession();
+  const [cursos, setCursos] = useState<Curso[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    per_page: 25,
+    pages: 0
+  });
+
+  const fetchCursos = async (newFilters?: CursosFilters) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response: PaginatedCursosResponse = await getCursos(newFilters || filters);
+      setCursos(response.data);
+      setPagination({
+        total: response.total,
+        page: response.page,
+        per_page: response.per_page,
+        pages: response.pages
+      });
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar cursos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (session) {
+      fetchCursos();
+    }
+  }, [session, filters]);
+
+  const createCursoMutation = async (cursoData: CursoCreate): Promise<Curso> => {
+    const nuevoCurso = await createCurso(cursoData);
+    await fetchCursos(); // Refrescar lista
+    return nuevoCurso;
+  };
+
+  const updateCursoMutation = async (cursoId: string, cursoData: CursoUpdate): Promise<Curso> => {
+    const cursoActualizado = await updateCurso(cursoId, cursoData);
+    await fetchCursos(); // Refrescar lista
+    return cursoActualizado;
+  };
+
+  const deleteCursoMutation = async (cursoId: string): Promise<void> => {
+    await deleteCurso(cursoId);
+    await fetchCursos(); // Refrescar lista
+  };
+
+  return {
+    cursos,
+    loading,
+    error,
+    pagination,
+    refetch: fetchCursos,
+    createCurso: createCursoMutation,
+    updateCurso: updateCursoMutation,
+    deleteCurso: deleteCursoMutation
+  };
+}
+
+export function useCurso(cursoId: string | null) {
+  const [curso, setCurso] = useState<Curso | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchCurso = async () => {
+    if (!cursoId) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      const cursoData = await getCurso(cursoId);
+      setCurso(cursoData);
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar curso');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCurso();
+  }, [cursoId]);
+
+  return {
+    curso,
+    loading,
+    error,
+    refetch: fetchCurso
+  };
+}
+
+export function useEstudiantesCurso(cursoId: string | null) {
+  const [estudiantes, setEstudiantes] = useState<EstudiantesCursoResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchEstudiantes = async () => {
+    if (!cursoId) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getEstudiantesCurso(cursoId);
+      setEstudiantes(data);
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar estudiantes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const inscribirEstudianteMutation = async (estudianteId: string) => {
+    if (!cursoId) throw new Error('No hay curso seleccionado');
+    
+    await inscribirEstudiante(cursoId, estudianteId);
+    await fetchEstudiantes(); // Refrescar lista
+  };
+
+  const importarCSVMutation = async (file: File): Promise<CSVImportResponse> => {
+    if (!cursoId) throw new Error('No hay curso seleccionado');
+    
+    const result = await importarEstudiantesCSV(cursoId, file);
+    await fetchEstudiantes(); // Refrescar lista
+    return result;
+  };
+
+  useEffect(() => {
+    fetchEstudiantes();
+  }, [cursoId]);
+
+  return {
+    estudiantes,
+    loading,
+    error,
+    refetch: fetchEstudiantes,
+    inscribirEstudiante: inscribirEstudianteMutation,
+    importarCSV: importarCSVMutation
+  };
+}

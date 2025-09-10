@@ -1,0 +1,60 @@
+sistema-certificados/
+├── docker-compose.yml                 
+├── usuarios-service/                
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── main.py
+│   │   ├── models.py
+│   │   ├── schemas.py
+│   │   ├── auth.py
+│   │   ├── database.py
+│   │   ├── dependencies.py
+│   │   └── routes.py
+│   ├── requirements.txt
+│   └── Dockerfile
+│
+├── cursos-service/                  
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── main.py                  
+│   │   ├── models.py                # Modelos: Curso, Inscripcion
+│   │   ├── schemas.py               # Schemas para cursos
+│   │   ├── database.py              
+│   │   ├── dependencies.py          
+│   │   └── routes.py                # CRUD cursos + inscripciones
+│   ├── requirements.txt            
+│   └── Dockerfile                   
+│
+├── certificados-service/             
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── main.py               
+│   │   ├── models.py                # Modelos: Plantilla, Certificado, Email
+│   │   ├── schemas.py               # Schemas para certificados
+│   │   ├── database.py            
+│   │   ├── dependencies.py      
+│   │   ├── routes.py                # CRUD plantillas + generar PDFs + email
+│   │   ├── pdf_generator.py         # Lógica PDF con ReportLab
+│   │   └── email_sender.py          # Lógica SMTP2GO
+│   ├── requirements.txt             # Igual + reportlab + requests
+│   ├── Dockerfile                 
+│   ├── templates/                   # Carpeta para plantillas subidas
+│   └── generated/                   # Carpeta para PDFs generados
+└──
+
+
+URLs de los Servicios:
+    Usuarios Service: http://localhost:8001
+    Cursos Service: http://localhost:8002
+    Certificados Service: http://localhost:8003
+    Frontend: http://localhost:3000
+    API Gateway: http://localhost:8000
+
+TESTING:
+    - usuarios-service: http://localhost:8001/docs
+    - cursos-service: http://localhost:8002/docs
+    - certificados-service: http://localhost:8003/docs
+
+usuarios-service (mantener separado - gestión independiente)
+cursos-service (mantener separado - lógica de negocio propia)
+certificados-service (integrar con email - cohesión funcional alta)

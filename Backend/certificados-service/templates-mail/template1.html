@@ -1,0 +1,218 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            line-height: 1.6; 
+            color: #333333;
+            background-color: #f4f4f4;
+        }
+        .email-wrapper {
+            width: 100%;
+            padding: 20px 0;
+            background-color: #f4f4f4;
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 650px; 
+            margin: 0 auto; 
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+        .header { 
+            background: linear-gradient(135deg, #2c5aa0 0%, #1e3c72 100%);
+            color: white; 
+            padding: 40px 30px; 
+            text-align: center; 
+            position: relative;
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd"><g fill="%23ffffff" fill-opacity="0.05"><circle cx="30" cy="30" r="4"/></g></svg>') repeat;
+        }
+        .header-content {
+            position: relative;
+            z-index: 2;
+        }
+        .header h1 { 
+            margin: 0; 
+            font-size: 32px; 
+            font-weight: 700; 
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .header .subtitle { 
+            margin: 15px 0 0 0; 
+            font-size: 18px; 
+            opacity: 0.95; 
+            font-weight: 300;
+        }
+        .icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            display: block;
+        }
+        .content { 
+            padding: 50px 40px; 
+            background: white; 
+        }
+        .greeting { 
+            color: #2c5aa0; 
+            margin-top: 0; 
+            font-size: 26px;
+            font-weight: 600;
+            margin-bottom: 30px;
+        }
+        .main-message {
+            font-size: 16px;
+            line-height: 1.8;
+            margin-bottom: 30px;
+            color: #555;
+        }
+        .course-highlight {
+            color: #2c5aa0;
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .certificate-notice { 
+            background: linear-gradient(135deg, #fff9c4 0%, #fff59d 100%);
+            border: 2px solid #ffc107; 
+            padding: 20px; 
+            border-radius: 10px; 
+            margin: 30px 0; 
+            text-align: center; 
+            font-weight: 600;
+            color: #856404;
+            font-size: 16px;
+        }
+        .certificate-notice::before {
+            content: "📎";
+            font-size: 24px;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .closing-message {
+            margin: 30px 0;
+            font-size: 16px;
+            line-height: 1.7;
+        }
+        .congratulations {
+            background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 30px 0;
+            border-left: 5px solid #4caf50;
+        }
+        .congratulations p {
+            margin: 0;
+            font-weight: 600;
+            color: #2e7d32;
+            font-size: 16px;
+        }
+        .footer { 
+            background: linear-gradient(135deg, #37474f 0%, #263238 100%);
+            color: white; 
+            padding: 30px 20px; 
+            text-align: center; 
+        }
+        .footer-content {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .footer h3 {
+            margin: 0 0 15px 0;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .footer p { 
+            margin: 8px 0; 
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        .contact-info {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+        @media (max-width: 600px) {
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+            .content {
+                padding: 30px 20px;
+            }
+            .header {
+                padding: 30px 20px;
+            }
+            .greeting {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-wrapper">
+        <div class="container">
+            <div class="header">
+                <div class="header-content">
+                    <span class="icon">🎓</span>
+                    <h1>Certificado de Participación</h1>
+                    <p class="subtitle">Centro de Desarrollo Profesional CDP</p>
+                </div>
+            </div>
+            
+            <div class="content">
+                <h2 class="greeting">¡Estimado/a {NOMBRE} {APELLIDO}!</h2>
+                
+                <div class="main-message">
+                    <p>Nos complace informarte que has completado satisfactoriamente: 
+                    <span class="course-highlight">Curso de Educación Parvularia</span>, con una duración de 40 horas.</p>
+                    
+                    <p>Tu dedicación y compromiso durante este proceso de formación han sido ejemplares, 
+                    contribuyendo significativamente al fortalecimiento de tus conocimientos profesionales.</p>
+                </div>
+
+
+                
+                <div class="certificate-notice">
+                    Tu certificado en formato PDF se encuentra adjunto a este correo electrónico
+                </div>
+                
+                <div class="closing-message">
+                    <p>Puedes descargar y guardar tu certificado para tus registros personales. 
+                    Este documento te servirá como respaldo oficial de tu participación y puede 
+                    ser presentado cuando sea requerido.</p>
+                    
+                </div>
+                
+                <div class="congratulations">
+                    <p>🌟 ¡Felicitaciones por este importante logro en tu desarrollo profesional! 🌟</p>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <div class="footer-content">
+                    <h3>Centro de Desarrollo Profesional - CDP</h3>
+                    <div class="contact-info">
+                        <p>📧 documentos@capacitacionescdp.com</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

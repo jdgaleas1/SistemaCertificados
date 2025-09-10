@@ -18,39 +18,48 @@ export default function TemplateEditorPage() {
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
   const [elements, setElements] = useState<any[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  // El fondo se ajusta automáticamente (contain) dentro del canvas
   const [nombre, setNombre] = useState<string>("Plantilla");
   const [descripcion, setDescripcion] = useState<string>("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!isNew) {
-      getTemplate(params.id as string).then((tpl) => {
-        if (tpl.canvas) setCanvasSize(tpl.canvas);
-        if (tpl.background_image_url) setBackgroundUrl(tpl.background_image_url);
-        if (tpl.fields) {
-          // Recrear objetos Image para elementos de imagen
-          const elementsWithImages = tpl.fields.map(async (el: any) => {
-            if (el.type === 'image' && (el.imageUrl || el.url)) {
-              const img = new Image();
-              return new Promise((resolve) => {
-                img.onload = () => {
-                  resolve({
-                    ...el,
-                    image: img,
-                    imageUrl: el.imageUrl || el.url, // Asegurar que imageUrl esté definido
-                  });
-                };
-                img.src = el.imageUrl || el.url;
-              });
-            }
-            return el;
-          });
-          
-          Promise.all(elementsWithImages).then(setElements);
-        }
-        if (tpl.nombre) setNombre(tpl.nombre);
-        if (tpl.descripcion) setDescripcion(tpl.descripcion);
-      });
+      setLoading(true);
+      getTemplate(params.id as string)
+        .then((tpl) => {
+          if (tpl.canvas) setCanvasSize(tpl.canvas);
+          if (tpl.background_image_url) setBackgroundUrl(tpl.background_image_url);
+          if (tpl.fields) {
+            // Recrear objetos Image para elementos de imagen
+            const elementsWithImages = tpl.fields.map(async (el: any) => {
+              if (el.type === 'image' && (el.imageUrl || el.url)) {
+                const img = new Image();
+                return new Promise((resolve) => {
+                  img.onload = () => {
+                    resolve({
+                      ...el,
+                      image: img,
+                      imageUrl: el.imageUrl || el.url,
+                    });
+                  };
+                  img.src = el.imageUrl || el.url;
+                });
+              }
+              return el;
+            });
+            
+            Promise.all(elementsWithImages).then(setElements);
+          }
+          if (tpl.nombre) setNombre(tpl.nombre);
+          if (tpl.descripcion) setDescripcion(tpl.descripcion);
+        })
+        .catch((error) => {
+          console.error('Error loading template:', error);
+          alert('Error al cargar la plantilla');
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
   }, [isNew, params.id]);
 
@@ -87,7 +96,7 @@ export default function TemplateEditorPage() {
             width: Math.min(img.width, 200),
             height: Math.min(img.height, 200),
             image: img,
-            imageUrl: url, // Guardamos la URL para serialización
+            imageUrl: url,
           },
         ]);
         setSelectedId(id);
@@ -131,9 +140,10 @@ export default function TemplateEditorPage() {
     setSelectedId(null);
   };
 
-
   const saveTemplate = async () => {
     try {
+      setLoading(true);
+      
       // Preparar elementos para guardar (sin objetos Image)
       const elementsToSave = elements.map(el => {
         if (el.type === 'image') {
@@ -167,100 +177,138 @@ export default function TemplateEditorPage() {
     } catch (error) {
       console.error('Error al guardar:', error);
       alert('Error al guardar la plantilla: ' + (error as Error).message);
+    } finally {
+      setLoading(false);
     }
   };
 
   const selectedElement = useMemo(() => elements.find((e) => e.id === selectedId), [elements, selectedId]);
 
+  if (loading && isNew === false) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <Text size="3" className="text-gray-600">Cargando plantilla...</Text>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
-      <div className="space-y-4">
-        <Flex justify="between" align="center">
-          <div className="flex flex-col gap-1">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex flex-col gap-2">
             <Heading size="6">Editor de Plantilla</Heading>
-            <div className="flex gap-2 items-center">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
-                className="px-2 py-1 border rounded w-64"
+                className="px-3 py-2 border rounded w-full sm:w-64"
                 placeholder="Nombre de la plantilla"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
               />
               <input
                 type="text"
-                className="px-2 py-1 border rounded w-80"
+                className="px-3 py-2 border rounded w-full sm:w-80"
                 placeholder="Descripción (opcional)"
                 value={descripcion}
                 onChange={(e) => setDescripcion(e.target.value)}
               />
             </div>
           </div>
-          <div className="flex gap-2 items-center">
-            <label className="inline-flex items-center gap-2 px-3 py-2 border rounded cursor-pointer bg-white hover:bg-gray-50">
-              <span className="text-sm text-gray-700">Fondo (PNG)</span>
+          
+          <div className="flex flex-wrap gap-2">
+            <label className="inline-flex items-center gap-2 px-3 py-2 border rounded cursor-pointer bg-white hover:bg-gray-50 text-sm">
+              <span className="text-gray-700">Fondo (PNG)</span>
               <input type="file" accept="image/png" onChange={handleUpload} className="hidden" />
             </label>
-            <label className="inline-flex items-center gap-2 px-3 py-2 border rounded cursor-pointer bg-white hover:bg-gray-50">
-              <span className="text-sm text-gray-700">Añadir Imagen</span>
+            <label className="inline-flex items-center gap-2 px-3 py-2 border rounded cursor-pointer bg-white hover:bg-gray-50 text-sm">
+              <span className="text-gray-700">Añadir Imagen</span>
               <input type="file" accept="image/*" onChange={handleAddImage} className="hidden" />
             </label>
             <Button onClick={addText} className="cursor-pointer">Añadir Texto</Button>
-            <Button onClick={saveTemplate} className="cursor-pointer">Guardar</Button>
+            <Button 
+              onClick={saveTemplate} 
+              className="cursor-pointer"
+              disabled={loading}
+            >
+              {loading ? 'Guardando...' : 'Guardar'}
+            </Button>
           </div>
-        </Flex>
+        </div>
 
         {/* Barra de herramientas */}
         {selectedId && (
-          <Card className="p-3">
-            <div className="flex flex-wrap gap-2 items-center">
+          <Card className="p-4">
+            <div className="flex flex-wrap gap-3 items-center">
               {elements.find((e) => e.id === selectedId)?.type === 'text' ? (
                 <>
-                  <label className="text-sm text-gray-600">Texto</label>
-                  <input
-                    type="text"
-                    className="px-2 py-1 border rounded w-48"
-                    value={elements.find((e) => e.id === selectedId)?.text || ''}
-                    onChange={(e) => updateSelected({ text: e.target.value })}
-                    placeholder="Escribe el texto aquí..."
-                  />
-                  <label className="text-sm text-gray-600">Tamaño</label>
-                  <input
-                    type="number"
-                    className="px-2 py-1 border rounded w-20"
-                    min={8}
-                    max={200}
-                    value={elements.find((e) => e.id === selectedId)?.fontSize || 36}
-                    onChange={(e) => updateSelected({ fontSize: Number(e.target.value) })}
-                  />
-                  <label className="text-sm text-gray-600">Fuente</label>
-                  <select
-                    className="px-2 py-1 border rounded"
-                    value={elements.find((e) => e.id === selectedId)?.fontFamily || 'Inter'}
-                    onChange={(e) => updateSelected({ fontFamily: e.target.value })}
-                  >
-                    <option value="Inter">Inter</option>
-                    <option value="Arial">Arial</option>
-                    <option value="Times New Roman">Times New Roman</option>
-                    <option value="Georgia">Georgia</option>
-                    <option value="Montserrat">Montserrat</option>
-                  </select>
-                  <label className="text-sm text-gray-600">Color</label>
-                  <input
-                    type="color"
-                    className="w-9 h-9 p-0 border rounded"
-                    value={elements.find((e) => e.id === selectedId)?.fill || '#222222'}
-                    onChange={(e) => updateSelected({ fill: e.target.value })}
-                  />
-                  <label className="text-sm text-gray-600">Alineación</label>
-                  <select
-                    className="px-2 py-1 border rounded"
-                    value={elements.find((e) => e.id === selectedId)?.align || 'left'}
-                    onChange={(e) => updateSelected({ align: e.target.value })}
-                  >
-                    <option value="left">Izquierda</option>
-                    <option value="center">Centro</option>
-                    <option value="right">Derecha</option>
-                  </select>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm text-gray-600">Texto</label>
+                    <input
+                      type="text"
+                      className="px-2 py-1 border rounded w-48"
+                      value={elements.find((e) => e.id === selectedId)?.text || ''}
+                      onChange={(e) => updateSelected({ text: e.target.value })}
+                      placeholder="Escribe el texto aquí..."
+                    />
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm text-gray-600">Tamaño</label>
+                    <input
+                      type="number"
+                      className="px-2 py-1 border rounded w-20"
+                      min={8}
+                      max={200}
+                      value={elements.find((e) => e.id === selectedId)?.fontSize || 36}
+                      onChange={(e) => updateSelected({ fontSize: Number(e.target.value) })}
+                    />
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm text-gray-600">Fuente</label>
+                    <select
+                      className="px-2 py-1 border rounded"
+                      value={elements.find((e) => e.id === selectedId)?.fontFamily || 'Inter'}
+                      onChange={(e) => updateSelected({ fontFamily: e.target.value })}
+                    >
+                      <option value="Inter">Inter</option>
+                      <option value="Arial">Arial</option>
+                      <option value="Times New Roman">Times New Roman</option>
+                      <option value="Georgia">Georgia</option>
+                      <option value="Montserrat">Montserrat</option>
+                    </select>
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm text-gray-600">Color</label>
+                    <input
+                      type="color"
+                      className="w-10 h-8 p-0 border rounded"
+                      value={elements.find((e) => e.id === selectedId)?.fill || '#222222'}
+                      onChange={(e) => updateSelected({ fill: e.target.value })}
+                    />
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm text-gray-600">Alineación</label>
+                    <select
+                      className="px-2 py-1 border rounded"
+                      value={elements.find((e) => e.id === selectedId)?.align || 'left'}
+                      onChange={(e) => updateSelected({ align: e.target.value })}
+                    >
+                      <option value="left">Izquierda</option>
+                      <option value="center">Centro</option>
+                      <option value="right">Derecha</option>
+                    </select>
+                  </div>
+                  
                   <Button
                     variant="outline"
                     className="cursor-pointer"
@@ -275,28 +323,35 @@ export default function TemplateEditorPage() {
                 </>
               ) : (
                 <>
-                  <label className="text-sm text-gray-600">Ancho</label>
-                  <input
-                    type="number"
-                    className="px-2 py-1 border rounded w-20"
-                    min={10}
-                    max={500}
-                    value={elements.find((e) => e.id === selectedId)?.width || 200}
-                    onChange={(e) => updateSelected({ width: Number(e.target.value) })}
-                  />
-                  <label className="text-sm text-gray-600">Alto</label>
-                  <input
-                    type="number"
-                    className="px-2 py-1 border rounded w-20"
-                    min={10}
-                    max={500}
-                    value={elements.find((e) => e.id === selectedId)?.height || 200}
-                    onChange={(e) => updateSelected({ height: Number(e.target.value) })}
-                  />
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm text-gray-600">Ancho</label>
+                    <input
+                      type="number"
+                      className="px-2 py-1 border rounded w-20"
+                      min={10}
+                      max={500}
+                      value={elements.find((e) => e.id === selectedId)?.width || 200}
+                      onChange={(e) => updateSelected({ width: Number(e.target.value) })}
+                    />
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm text-gray-600">Alto</label>
+                    <input
+                      type="number"
+                      className="px-2 py-1 border rounded w-20"
+                      min={10}
+                      max={500}
+                      value={elements.find((e) => e.id === selectedId)?.height || 200}
+                      onChange={(e) => updateSelected({ height: Number(e.target.value) })}
+                    />
+                  </div>
                 </>
               )}
+              
               <Button
                 variant="outline"
+                color="red"
                 className="cursor-pointer"
                 onClick={deleteSelected}
               >
@@ -306,21 +361,18 @@ export default function TemplateEditorPage() {
           </Card>
         )}
 
-        <Card className="p-4 overflow-auto">
-          <div className="mx-auto" style={{ width: canvasSize.width }}>
-            <CanvasEditor
-              canvasSize={canvasSize}
-              backgroundUrl={backgroundUrl}
-              elements={elements}
-              setElements={setElements}
-              selectedId={selectedId}
-              setSelectedId={setSelectedId}
-            />
-          </div>
+        {/* Canvas Editor */}
+        <Card className="p-4">
+          <CanvasEditor
+            canvasSize={canvasSize}
+            backgroundUrl={backgroundUrl}
+            elements={elements}
+            setElements={setElements}
+            selectedId={selectedId}
+            setSelectedId={setSelectedId}
+          />
         </Card>
       </div>
     </DashboardLayout>
   );
 }
-
-

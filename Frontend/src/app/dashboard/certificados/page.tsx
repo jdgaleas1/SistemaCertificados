@@ -23,11 +23,11 @@ export default function CertificadosPage() {
       unit: 'pt', // Puntos
       format: 'a4' // A4
     });
-    
+
     // Dimensiones del PDF (A4 horizontal)
     const pdfWidth = 842;
     const pdfHeight = 595;
-    
+
     // Función para convertir imagen a base64 (evita CORS)
     const imageToBase64 = (url: string): Promise<string> => {
       return new Promise((resolve, reject) => {
@@ -42,7 +42,7 @@ export default function CertificadosPage() {
           .catch(reject);
       });
     };
-    
+
     // Función para convertir color hex a RGB
     const hexToRgb = (hex: string) => {
       const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -52,7 +52,7 @@ export default function CertificadosPage() {
         b: parseInt(result[3], 16)
       } : { r: 0, g: 0, b: 0 };
     };
-    
+
     // Función para escalar coordenadas del canvas al PDF
     const scaleCoordinates = (canvasSize: any, pdfSize: any) => {
       return {
@@ -63,11 +63,11 @@ export default function CertificadosPage() {
         height: (height: number) => (height / canvasSize.height) * pdfSize.height
       };
     };
-    
+
     try {
       const canvasSize = plantilla.canvas || { width: 1600, height: 1131 };
       const scale = scaleCoordinates(canvasSize, { width: pdfWidth, height: pdfHeight });
-      
+
       // Agregar imagen de fondo si existe
       if (plantilla.background_image_url) {
         try {
@@ -78,7 +78,7 @@ export default function CertificadosPage() {
           console.warn('No se pudo cargar la imagen de fondo:', error);
         }
       }
-      
+
       // Procesar elementos de la plantilla
       if (plantilla.fields) {
         for (const element of plantilla.fields) {
@@ -87,23 +87,23 @@ export default function CertificadosPage() {
             const x = scale.x(element.x);
             const y = scale.y(element.y);
             const fontSize = scale.fontSize(element.fontSize);
-            
+
             // Configurar fuente y estilo
             const fontFamily = element.fontFamily || 'helvetica';
             const fontStyle = element.fontStyle === 'bold' ? 'bold' : 'normal';
-            
+
             // Convertir color hex a RGB
             const color = hexToRgb(element.fill || '#000000');
-            
+
             // Configurar texto
             pdf.setFont(fontFamily, fontStyle);
             pdf.setFontSize(fontSize);
             pdf.setTextColor(color.r, color.g, color.b);
-            
+
             // Alineación del texto
             const textAlign = element.align || 'left';
             let textX = x;
-            
+
             if (textAlign === 'center') {
               const textWidth = pdf.getTextWidth(element.text);
               textX = x - (textWidth / 2);
@@ -111,19 +111,19 @@ export default function CertificadosPage() {
               const textWidth = pdf.getTextWidth(element.text);
               textX = x - textWidth;
             }
-            
+
             // Agregar texto al PDF
             pdf.text(element.text, textX, y);
-            
-          } else if (element.type === 'image' && (element.imageUrl || element.url)) {
+
+          } else if (element.type === 'image' && element.imageUrl) {
             // Agregar imágenes/logos
             try {
-              const base64Img = await imageToBase64(element.imageUrl || element.url);
+              const base64Img = await imageToBase64(element.imageUrl);
               const x = scale.x(element.x);
               const y = scale.y(element.y);
               const width = scale.width(element.width);
               const height = scale.height(element.height);
-              
+
               pdf.addImage(base64Img, 'PNG', x, y, width, height);
             } catch (error) {
               console.warn('No se pudo cargar imagen del elemento:', error);
@@ -131,10 +131,10 @@ export default function CertificadosPage() {
           }
         }
       }
-      
+
       // Descargar el PDF
       pdf.save(`${plantilla.nombre || 'certificado'}.pdf`);
-      
+
     } catch (error) {
       console.error('Error al generar PDF:', error);
       alert('Error al generar el PDF. Inténtalo de nuevo.');
@@ -196,7 +196,7 @@ export default function CertificadosPage() {
             </Text>
           </div>
           <div className="flex gap-2">
-            <Button className="cursor-pointer" onClick={() => router.push("/dashboard/certificados/editor/nueva") }>
+            <Button className="cursor-pointer" onClick={() => router.push("/dashboard/certificados/editor/nueva")}>
               <Plus size={16} />
               Nueva Plantilla
             </Button>
@@ -272,49 +272,52 @@ export default function CertificadosPage() {
                       {plantilla.is_active ? "Activa" : "Borrador"}
                     </Badge>
                   </div>
-                  <div className="w-full h-40 bg-gray-100 rounded overflow-hidden flex items-center justify-center relative">
+                  <div className="w-full bg-gray-100 rounded overflow-hidden relative" style={{ aspectRatio: '1600/1131', height: 'auto' }}>
                     {plantilla.background_image_url ? (
-                      <div className="relative w-full h-full">
+                      <div className="absolute inset-0" style={{ width: '100%', height: '100%' }}>
                         <img
                           src={plantilla.background_image_url}
                           alt={plantilla.nombre}
-                          className="w-full h-full object-contain"
+                          className="w-full h-full object-cover"
                         />
-                        {/* Renderizar elementos de texto e imágenes encima */}
+                        {/* Renderizar elementos con coordenadas absolutas exactas */}
                         {plantilla.fields && plantilla.fields.map((element: any) => {
+                          // Calcular el factor de escala basado en el ancho actual del contenedor
+                          const containerWidth = 300; // Aproximado ancho de la card
+                          const scaleFactor = containerWidth / 1600;
+
                           if (element.type === 'text') {
                             return (
                               <div
                                 key={element.id}
                                 className="absolute pointer-events-none"
                                 style={{
-                                  left: `${(element.x / 1600) * 100}%`,
-                                  top: `${(element.y / 1131) * 100}%`,
-                                  fontSize: `${Math.max(8, (element.fontSize / 1600) * 100)}px`,
+                                  left: `${element.x * scaleFactor}px`,
+                                  top: `${element.y * scaleFactor}px`,
+                                  fontSize: `${Math.max(6, element.fontSize * scaleFactor)}px`,
                                   fontFamily: element.fontFamily,
                                   color: element.fill,
                                   fontWeight: element.fontStyle === 'bold' ? 'bold' : 'normal',
                                   textAlign: element.align,
                                   whiteSpace: 'nowrap',
-                                  maxWidth: `${(element.width / 1600) * 100}%`,
                                 }}
                               >
                                 {element.text}
                               </div>
                             );
                           }
-                          if (element.type === 'image' && (element.imageUrl || element.url)) {
+                          if (element.type === 'image' && element.imageUrl) {
                             return (
                               <img
                                 key={element.id}
-                                src={element.imageUrl || element.url}
+                                src={element.imageUrl}
                                 alt="Elemento"
                                 className="absolute pointer-events-none"
                                 style={{
-                                  left: `${(element.x / 1600) * 100}%`,
-                                  top: `${(element.y / 1131) * 100}%`,
-                                  width: `${(element.width / 1600) * 100}%`,
-                                  height: `${(element.height / 1131) * 100}%`,
+                                  left: `${element.x * scaleFactor}px`,
+                                  top: `${element.y * scaleFactor}px`,
+                                  width: `${element.width * scaleFactor}px`,
+                                  height: `${element.height * scaleFactor}px`,
                                   objectFit: 'contain',
                                 }}
                               />
@@ -324,10 +327,12 @@ export default function CertificadosPage() {
                         })}
                       </div>
                     ) : (
-                      <div className="text-gray-400 text-sm">Sin imagen de fondo</div>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-gray-400 text-sm">Sin imagen de fondo</div>
+                      </div>
                     )}
                   </div>
-                  
+
                   <div>
                     <Heading size="4" className="mb-2">
                       {plantilla.nombre}

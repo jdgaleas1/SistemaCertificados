@@ -176,6 +176,10 @@ export async function updateTemplate(id: string, payload: any) {
   return certificadosApi.put(`/templates/${id}`, payload);
 }
 
+export async function deleteTemplate(id: string) {
+  return certificadosApi.delete(`/templates/${id}`);
+}
+
 // User management functions
 export async function getUsers() {
   return api.get("/usuarios");

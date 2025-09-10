@@ -389,3 +389,128 @@ def delete_template(
     db.delete(t)
     db.commit()
     return {"message": "Plantilla eliminada"}
+
+# Agregar estas rutas al final del archivo routes.py (antes del health check)
+
+# ===================== PLANTILLAS DE EMAIL =====================
+@router.get("/plantillas-email", response_model=List[PlantillaEmailResponse])
+def get_plantillas_email(
+    skip: int = 0,
+    limit: int = 100,
+    activas: bool = None,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    """Listar plantillas de email"""
+    query = db.query(PlantillaEmail)
+    
+    if activas is not None:
+        query = query.filter(PlantillaEmail.is_active == activas)
+    
+    # Solo admin puede ver todas, otros solo las activas
+    if current_user.rol != RolUsuario.ADMIN:
+        query = query.filter(PlantillaEmail.is_active == True)
+    
+    plantillas = query.order_by(PlantillaEmail.fecha_creacion.desc()).offset(skip).limit(limit).all()
+    
+    result = []
+    for plantilla in plantillas:
+        # Extraer variables del contenido HTML
+        variables = extraer_variables_plantilla(plantilla.contenido_html) if plantilla.contenido_html else []
+        
+        plantilla_dict = PlantillaEmailResponse.from_orm(plantilla).dict()
+        plantilla_dict['variables_disponibles'] = variables
+        result.append(plantilla_dict)
+    
+    return result
+
+@router.post("/plantillas-email", response_model=PlantillaEmailResponse, status_code=status.HTTP_201_CREATED)
+def create_plantilla_email(
+    plantilla: PlantillaEmailCreate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_admin_user)
+):
+    """Crear nueva plantilla de email (solo admin)"""
+    
+    # Extraer variables del contenido HTML
+    variables = extraer_variables_plantilla(plantilla.contenido_html)
+    
+    try:
+        db_plantilla = PlantillaEmail(
+            nombre=plantilla.nombre,
+            descripcion=plantilla.descripcion,
+            asunto=plantilla.asunto,
+            contenido_html=plantilla.contenido_html,
+            variables_disponibles=json.dumps(variables) if variables else None
+        )
+        
+        db.add(db_plantilla)
+        db.commit()
+        db.refresh(db_plantilla)
+        
+        # Preparar respuesta
+        plantilla_response = PlantillaEmailResponse.from_orm(db_plantilla).dict()
+        plantilla_response['variables_disponibles'] = variables
+        
+        return plantilla_response
+        
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Error al crear la plantilla")
+
+@router.get("/plantillas-email/{plantilla_id}", response_model=PlantillaEmailResponse)
+def get_plantilla_email(
+    plantilla_id: str,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    """Obtener plantilla de email por ID"""
+    
+    plantilla = db.query(PlantillaEmail).filter(PlantillaEmail.id == plantilla_id).first()
+    if not plantilla:
+        raise HTTPException(status_code=404, detail="Plantilla no encontrada")
+    
+    # Solo admin puede ver inactivas
+    if not plantilla.is_active and current_user.rol != RolUsuario.ADMIN:
+        raise HTTPException(status_code=404, detail="Plantilla no encontrada")
+    
+    # Extraer variables del contenido HTML
+    variables = extraer_variables_plantilla(plantilla.contenido_html) if plantilla.contenido_html else []
+    
+    plantilla_response = PlantillaEmailResponse.from_orm(plantilla).dict()
+    plantilla_response['variables_disponibles'] = variables
+    
+    return plantilla_response
+
+@router.put("/plantillas-email/{plantilla_id}", response_model=PlantillaEmailResponse)
+def update_plantilla_email(
+    plantilla_id: str,
+    plantilla_update: PlantillaEmailUpdate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_admin_user)
+):
+    """Actualizar plantilla de email (solo admin)"""
+    
+    plantilla = db.query(PlantillaEmail).filter(PlantillaEmail.id == plantilla_id).first()
+    if not plantilla:
+        raise HTTPException(status_code=404, detail="Plantilla no encontrada")
+    
+    update_data = plantilla_update.dict(exclude_unset=True)
+    
+    # Si se actualiza el contenido, extraer nuevas variables
+    if "contenido_html" in update_data:
+        variables = extraer_variables_plantilla(update_data["contenido_html"])
+        update_data["variables_disponibles"] = json.dumps(variables) if variables else None
+    
+    for field, value in update_data.items():
+        setattr(plantilla, field, value)
+    
+    db.commit()
+    db.refresh(plantilla)
+    
+    # Preparar respuesta
+    variables = json.loads(plantilla.variables_disponibles) if plantilla.variables_disponibles else []
+    plantilla_response = PlantillaEmailResponse.from_orm(plantilla).dict()
+    plantilla_response['variables_disponibles'] = variables
+    
+    return plantilla_response

@@ -82,7 +82,7 @@ def get_usuarios(
     current_user: Usuario = Depends(get_admin_user)
 ):
     """Obtener lista de usuarios (solo admin)"""
-    users = db.query(Usuario).filter(Usuario.is_active == True).offset(skip).limit(limit).all()
+    users = db.query(Usuario).offset(skip).limit(limit).all()
     return [UsuarioResponse.from_orm(user) for user in users]
 
 @router.post("/usuarios", response_model=UsuarioResponse, status_code=status.HTTP_201_CREATED)

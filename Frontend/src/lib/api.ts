@@ -275,12 +275,12 @@ export async function importarEstudiantesCSV(cursoId: string, file: File) {
 }
 
 // Nueva versión para importar XLSX directamente
-export async function importarEstudiantesXLSX(file: File) {
+export async function importarEstudiantesXLSX(file: File) { 
   const formData = new FormData();
   formData.append('file', file);
   
   const session = await getSession();
-  const url = `${CURSOS_SERVICE_URL}/inscripciones/xlsx`;
+  const url = `${CURSOS_SERVICE_URL}/inscripciones/xlsx`; 
   
   const headers: Record<string, string> = {};
   if (session?.accessToken) {

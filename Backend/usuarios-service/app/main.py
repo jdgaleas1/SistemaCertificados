@@ -32,13 +32,12 @@ def create_default_admin():
     """Crear usuario administrador por defecto"""
     db = SessionLocal()
     try:
-        # Verificar si ya existe el admin
         admin = db.query(Usuario).filter(Usuario.email == "admin@test.com").first()
         if not admin:
             admin = Usuario(
                 email="admin@test.com",
                 nombre="Admin",
-                apellido="Sistema", 
+                apellido="Sistema",
                 cedula="0000000000",
                 rol=RolUsuario.ADMIN,
                 password_hash=get_password_hash("admin123")
@@ -51,8 +50,31 @@ def create_default_admin():
     finally:
         db.close()
 
+def create_default_instructor():
+    """Crear usuario instructor por defecto"""
+    db = SessionLocal()
+    try:
+        instructor = db.query(Usuario).filter(Usuario.email == "instructorDefaul@gmail.com").first()
+        if not instructor:
+            instructor = Usuario(
+                email="instructorDefaul@gmail.com",
+                nombre="Instructor",
+                apellido="Por Defecto",
+                cedula="111111",
+                rol=RolUsuario.PROFESOR,  
+                password_hash=get_password_hash("123456")
+            )
+            db.add(instructor)
+            db.commit()
+            print("✅ Usuario instructor creado: instructorDefaul@gmail.com / 123456")
+        else:
+            print("ℹ️  Usuario instructor ya existe")
+    finally:
+        db.close()
+
 @app.on_event("startup")
 def startup_event():
     """Ejecutar al iniciar la aplicación"""
     create_tables()
     create_default_admin()
+    create_default_instructor()

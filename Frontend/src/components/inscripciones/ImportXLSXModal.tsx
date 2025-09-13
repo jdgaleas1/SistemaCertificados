@@ -10,7 +10,7 @@ import { Curso, CSVImportResponse } from "@/types/cursos";
 interface ImportCSVModalProps {
   open: boolean;
   onClose: () => void;
-  onImport: (cursoId: string, file: File) => Promise<CSVImportResponse>;
+  onImport: (file: File) => Promise<CSVImportResponse>; 
 }
 
 export default function ImportCSVModal({ open, onClose, onImport }: ImportCSVModalProps) {
@@ -57,27 +57,13 @@ export default function ImportCSVModal({ open, onClose, onImport }: ImportCSVMod
     }
   };
 
-  const handleImport = async () => {
-    if (!selectedCurso) {
-      alert("Debe seleccionar un curso");
-      return;
-    }
-
-    if (!selectedFile) {
-      alert("Debe seleccionar un archivo Excel (.xlsx)");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const result = await onImport(selectedCurso, selectedFile);
-      setImportResult(result);
-    } catch (error: any) {
-      alert(error.message || "Error al importar el archivo");
-    } finally {
-      setLoading(false);
-    }
-  };
+const handleImport = async () => {
+  if (!selectedFile) {
+    alert("Debe seleccionar un archivo Excel (.xlsx)");
+    return;
+  }
+  const result = await onImport(selectedFile);  
+}
 
   const downloadTemplate = () => {
     const a = document.createElement('a');

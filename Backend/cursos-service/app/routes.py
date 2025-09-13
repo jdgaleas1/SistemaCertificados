@@ -283,23 +283,15 @@ def get_estudiantes_curso(
         "estudiantes": estudiantes
     }
 
+# Backend/cursos-service/app/routes.py - ENDPOINT REEMPLAZADO
+
 @router.post("/inscripciones/xlsx", response_model=CSVImportResponse)
-async def import_xlsx_inscripciones(
-    curso_id: str,
+async def import_xlsx_estructura_cdp(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_teacher_or_admin)
 ):
-    """Importación masiva de estudiantes desde archivo XLSX"""
-    
-    # Verificar curso
-    curso = db.query(Curso).filter(Curso.id == curso_id, Curso.is_active == True).first()
-    if not curso:
-        raise HTTPException(status_code=404, detail="Curso no encontrado")
-    
-    # Verificar permisos
-    if current_user.rol == RolUsuario.PROFESOR and str(curso.instructor_id) != str(current_user.id):
-        raise HTTPException(status_code=403, detail="Sin permisos para inscribir en este curso")
+    """Importación completa CDP desde Excel con estructura específica"""
     
     # Verificar formato del archivo
     if not file.filename.endswith(('.xlsx', '.xls')):
@@ -310,73 +302,174 @@ async def import_xlsx_inscripciones(
         content = await file.read()
         df = pd.read_excel(io.BytesIO(content))
         
-        # Validar headers
-        required_columns = ['email', 'nombre', 'apellido', 'cedula']
-        if not all(col in df.columns for col in required_columns):
+        # Definir columnas esperadas (TUS columnas exactas)
+        expected_columns = [
+            'Nombres Estudiante',
+            'Apellidos Estudiante', 
+            'Numero de cedula estudiante',
+            'Correo estudiante',
+            'Curso',
+            'Estudiante Activo/Inactivo',
+            'Instructor a cargo del curso'
+        ]
+        
+        # Validar que todas las columnas requeridas estén presentes
+        missing_columns = [col for col in expected_columns if col not in df.columns]
+        if missing_columns:
             raise HTTPException(
                 status_code=400, 
-                detail=f"El archivo debe contener las columnas: {', '.join(required_columns)}"
+                detail=f"El archivo debe contener las columnas: {', '.join(missing_columns)}"
             )
         
+        # Limpiar datos
+        df = df.fillna('')
+        
+        # Contadores para el reporte
         usuarios_creados = 0
+        cursos_creados = 0
         inscripciones_creadas = 0
         errores = []
         exitosos = []
         
+        # Cache para evitar consultas repetidas
+        instructores_cache = {}
+        cursos_cache = {}
+        estudiantes_procesados = {}  # Para manejar cédulas duplicadas
+        
         for index, row in df.iterrows():
             try:
-                # Validar datos con Pydantic
-                estudiante_data = EstudianteCSV(
-                    email=row['email'],
-                    nombre=row['nombre'],
-                    apellido=row['apellido'],
-                    cedula=row['cedula']
-                )
+                # Limpiar datos de la fila
+                nombres = str(row['Nombres Estudiante']).strip()
+                apellidos = str(row['Apellidos Estudiante']).strip()
+                cedula = str(row['Numero de cedula estudiante']).strip()
+                email = str(row['Correo estudiante']).strip().lower()
+                curso_nombre = str(row['Curso']).strip()
+                estado_texto = str(row['Estudiante Activo/Inactivo']).strip()
+                instructor_email = str(row['Instructor a cargo del curso']).strip().lower()
                 
-                # Buscar o crear usuario
-                usuario_existente = db.query(Usuario).filter(Usuario.email == estudiante_data.email).first()
+                # Validar datos obligatorios
+                if not all([nombres, apellidos, cedula, email, curso_nombre, instructor_email]):
+                    errores.append(f"Fila {index + 2}: Datos incompletos")
+                    continue
                 
-                if not usuario_existente:
-                    # Crear nuevo usuario
-                    nuevo_usuario = Usuario(
-                        email=estudiante_data.email,
-                        nombre=estudiante_data.nombre,
-                        apellido=estudiante_data.apellido,
-                        cedula=estudiante_data.cedula,
-                        rol=RolUsuario.ESTUDIANTE,
-                        password_hash=get_password_hash("123456")  # Password temporal
-                    )
-                    db.add(nuevo_usuario)
-                    db.commit()
-                    db.refresh(nuevo_usuario)
-                    usuarios_creados += 1
-                    usuario_id = nuevo_usuario.id
+                # Convertir estado Activo/Inactivo
+                is_active = estado_texto.lower() == 'activo'
+                
+                # 1. PROCESAR INSTRUCTOR
+                if instructor_email not in instructores_cache:
+                    # Buscar instructor por email
+                    instructor = db.query(Usuario).filter(
+                        Usuario.email == instructor_email,
+                        Usuario.rol == RolUsuario.PROFESOR
+                    ).first()
+                    
+                    if not instructor:
+                        # Si no existe, buscar el instructor por defecto
+                        instructor = db.query(Usuario).filter(
+                            Usuario.email == "instructorDefaul@gmail.com"
+                        ).first()
+                        
+                        if not instructor:
+                            errores.append(f"Fila {index + 2}: No se encontró instructor por defecto")
+                            continue
+                    
+                    instructores_cache[instructor_email] = instructor.id
+                
+                instructor_id = instructores_cache[instructor_email]
+                
+                # 2. PROCESAR CURSO
+                curso_key = f"{curso_nombre}_{instructor_id}"
+                if curso_key not in cursos_cache:
+                    # Buscar curso existente
+                    curso = db.query(Curso).filter(
+                        Curso.nombre == curso_nombre,
+                        Curso.instructor_id == instructor_id
+                    ).first()
+                    
+                    if not curso:
+                        # Crear nuevo curso
+                        curso = Curso(
+                            nombre=curso_nombre,
+                            instructor_id=instructor_id
+                        )
+                        db.add(curso)
+                        db.flush()  # Para obtener el ID
+                        cursos_creados += 1
+                    
+                    cursos_cache[curso_key] = curso.id
+                
+                curso_id = cursos_cache[curso_key]
+                
+                # 3. PROCESAR ESTUDIANTE (manejar cédulas duplicadas)
+                if cedula in estudiantes_procesados:
+                    # Cédula duplicada: Excel prevalece, actualizar datos
+                    estudiante = db.query(Usuario).filter(Usuario.id == estudiantes_procesados[cedula]).first()
+                    if estudiante:
+                        estudiante.email = email
+                        estudiante.nombre = nombres
+                        estudiante.apellido = apellidos
+                        db.flush()
                 else:
-                    usuario_id = usuario_existente.id
+                    # Buscar estudiante existente por email o cédula
+                    estudiante = db.query(Usuario).filter(
+                        or_(Usuario.email == email, Usuario.cedula == cedula)
+                    ).first()
+                    
+                    if not estudiante:
+                        # Crear nuevo estudiante
+                        estudiante = Usuario(
+                            email=email,
+                            nombre=nombres,
+                            apellido=apellidos,
+                            cedula=cedula,
+                            rol=RolUsuario.ESTUDIANTE,
+                            password_hash=get_password_hash("123456")  # Password temporal
+                        )
+                        db.add(estudiante)
+                        db.flush()
+                        usuarios_creados += 1
+                    else:
+                        # Actualizar datos del estudiante existente (Excel prevalece)
+                        estudiante.email = email
+                        estudiante.nombre = nombres
+                        estudiante.apellido = apellidos
+                        estudiante.cedula = cedula
+                        db.flush()
+                    
+                    estudiantes_procesados[cedula] = estudiante.id
                 
-                # Verificar si ya está inscrito
+                estudiante_id = estudiantes_procesados[cedula]
+                
+                # 4. CREAR/ACTUALIZAR INSCRIPCIÓN
                 inscripcion_existente = db.query(Inscripcion).filter(
                     Inscripcion.curso_id == curso_id,
-                    Inscripcion.estudiante_id == usuario_id,
-                    Inscripcion.is_active == True
+                    Inscripcion.estudiante_id == estudiante_id
                 ).first()
                 
-                if not inscripcion_existente:
-                    # Crear inscripción
-                    nueva_inscripcion = Inscripcion(
-                        curso_id=curso_id,
-                        estudiante_id=usuario_id
-                    )
-                    db.add(nueva_inscripcion)
-                    db.commit()
-                    inscripciones_creadas += 1
-                    exitosos.append(f"{estudiante_data.nombre} {estudiante_data.apellido} - {estudiante_data.email}")
+                if inscripcion_existente:
+                    # Actualizar inscripción existente
+                    inscripcion_existente.is_active = is_active
+                    inscripcion_existente.completado = False  # Reset por si cambió estado
                 else:
-                    exitosos.append(f"{estudiante_data.nombre} {estudiante_data.apellido} - Ya inscrito")
+                    # Crear nueva inscripción
+                    inscripcion = Inscripcion(
+                        curso_id=curso_id,
+                        estudiante_id=estudiante_id,
+                        is_active=is_active
+                    )
+                    db.add(inscripcion)
+                    inscripciones_creadas += 1
+                
+                # Registro exitoso
+                estado_str = "Activo" if is_active else "Inactivo"
+                exitosos.append(f"{nombres} {apellidos} → {curso_nombre} ({estado_str})")
                 
             except Exception as e:
-                errores.append(f"Fila {index + 2}: {str(e)}")  # +2 porque Excel empieza en 1 y hay header
+                errores.append(f"Fila {index + 2}: {str(e)}")
                 continue
+        
+        # Confirmar todos los cambios
+        db.commit()
         
         return CSVImportResponse(
             total_procesados=len(df),
@@ -387,7 +480,8 @@ async def import_xlsx_inscripciones(
         )
         
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error procesando archivo XLSX: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Error procesando archivo Excel: {str(e)}")
 
 # GESTIÓN DE INSCRIPCIONES
 @router.get("/inscripciones")

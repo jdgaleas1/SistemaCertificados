@@ -1,4 +1,4 @@
-# app/database.py
+# app/database.py - CERTIFICADOS SERVICE
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session

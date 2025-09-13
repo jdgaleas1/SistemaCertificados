@@ -56,12 +56,3 @@ def startup_event():
     """Ejecutar al iniciar la aplicación"""
     create_tables()
     create_default_admin()
-
-@app.get("/")
-def root():
-    """Endpoint raíz"""
-    return {
-        "service": "usuarios-service",
-        "version": "1.0.0",
-        "status": "running"
-    }

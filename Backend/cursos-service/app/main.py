@@ -30,12 +30,3 @@ app.include_router(router)
 def startup_event():
     """Ejecutar al iniciar la aplicación"""
     create_tables()
-
-@app.get("/")
-def root():
-    """Endpoint raíz"""
-    return {
-        "service": "cursos-service",
-        "version": "1.0.0",
-        "status": "running"
-    }

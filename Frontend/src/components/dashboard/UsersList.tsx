@@ -194,21 +194,24 @@ export default function UsersList({
             >
               <Key size={14} />
             </Button>
-            <Button
-              size="1"
-              variant="soft"
-              color="red"
-              onClick={() => onDeleteUser?.(row.original)}
-              className="cursor-pointer"
-              title="Eliminar usuario"
-            >
-              <Trash2 size={14} />
-            </Button>
+            {/* Solo mostrar botón de eliminar si no es el usuario admin actual */}
+            {session?.user?.id !== row.original.id && (
+              <Button
+                size="1"
+                variant="soft"
+                color="red"
+                onClick={() => onDeleteUser?.(row.original)}
+                className="cursor-pointer"
+                title="Eliminar usuario"
+              >
+                <Trash2 size={14} />
+              </Button>
+            )}
           </Flex>
         ),
       },
     ],
-    [onEditUser, onDeleteUser, onChangePassword]
+    [onEditUser, onDeleteUser, onChangePassword, session?.user?.id]
   );
 
   return (

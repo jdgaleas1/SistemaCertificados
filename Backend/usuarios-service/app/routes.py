@@ -220,6 +220,20 @@ def delete_usuario(
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     
+    # Verificar que el admin no se esté eliminando a sí mismo
+    if str(current_user.id) == user_id:
+        raise HTTPException(
+            status_code=400, 
+            detail="No puedes eliminar tu propia cuenta de administrador"
+        )
+    
+    # Verificar que el usuario no esté ya inactivo
+    if not user.is_active:
+        raise HTTPException(
+            status_code=400, 
+            detail="El usuario ya está inactivo"
+        )
+    
     user.is_active = False
     db.commit()
     

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Dialog, Button, Flex, Text } from "@radix-ui/themes";
 import { Trash2, AlertTriangle } from "lucide-react";
 import { deleteUser } from "@/lib/api";
+import { useSession } from "next-auth/react";
 
 interface DeleteUserModalProps {
   open: boolean;
@@ -12,8 +13,12 @@ interface DeleteUserModalProps {
 }
 
 export default function DeleteUserModal({ open, user, onClose }: DeleteUserModalProps) {
+  const { data: session } = useSession();
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState("");
+  
+  // Verificar si es el usuario admin actual
+  const isCurrentUser = session?.user?.id === user?.id;
 
   const handleDelete = async () => {
     if (!user?.id) return;
@@ -22,11 +27,29 @@ export default function DeleteUserModal({ open, user, onClose }: DeleteUserModal
     setError("");
 
     try {
-      await deleteUser(user.id);
+      console.log("Intentando eliminar usuario:", user.id);
+      const response = await deleteUser(user.id);
+      console.log("Usuario eliminado exitosamente:", response);
       onClose();
     } catch (error: any) {
       console.error("Error deleting user:", error);
-      setError(error.message || "Error al eliminar el usuario");
+      
+      // Manejar diferentes tipos de errores
+      let errorMessage = "Error al eliminar el usuario";
+      
+      if (error.status === 400) {
+        errorMessage = error.message || "No se puede eliminar este usuario";
+      } else if (error.status === 403) {
+        errorMessage = "No tienes permisos para eliminar usuarios";
+      } else if (error.status === 404) {
+        errorMessage = "Usuario no encontrado";
+      } else if (error.status === 401) {
+        errorMessage = "Sesión expirada. Por favor, inicia sesión nuevamente";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsDeleting(false);
     }
@@ -50,7 +73,10 @@ export default function DeleteUserModal({ open, user, onClose }: DeleteUserModal
         </Dialog.Title>
         
         <Dialog.Description size="2" mb="4">
-          Esta acción no se puede deshacer. ¿Estás seguro de que deseas eliminar este usuario?
+          {isCurrentUser 
+            ? "No puedes eliminar tu propia cuenta de administrador. Esta acción está restringida por seguridad."
+            : "Esta acción no se puede deshacer. ¿Estás seguro de que deseas eliminar este usuario?"
+          }
         </Dialog.Description>
 
         {user && (
@@ -85,11 +111,11 @@ export default function DeleteUserModal({ open, user, onClose }: DeleteUserModal
           <Button 
             color="red"
             onClick={handleDelete}
-            disabled={isDeleting}
+            disabled={isDeleting || isCurrentUser}
             className="cursor-pointer"
           >
             <Trash2 size={16} />
-            {isDeleting ? "Eliminando..." : "Eliminar"}
+            {isDeleting ? "Eliminando..." : isCurrentUser ? "No disponible" : "Eliminar"}
           </Button>
         </Flex>
       </Dialog.Content>

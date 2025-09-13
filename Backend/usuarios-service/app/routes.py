@@ -82,7 +82,7 @@ def get_usuarios(
     current_user: Usuario = Depends(get_admin_user)
 ):
     """Obtener lista de usuarios (solo admin)"""
-    users = db.query(Usuario).offset(skip).limit(limit).all()
+    users = db.query(Usuario).filter(Usuario.is_active == True).offset(skip).limit(limit).all()
     return [UsuarioResponse.from_orm(user) for user in users]
 
 @router.post("/usuarios", response_model=UsuarioResponse, status_code=status.HTTP_201_CREATED)
@@ -214,7 +214,7 @@ def delete_usuario(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_admin_user)
 ):
-    """Eliminar usuario (soft delete) - solo admin"""
+    """Eliminar usuario (hard delete) - solo admin"""
     
     user = db.query(Usuario).filter(Usuario.id == user_id).first()
     if not user:
@@ -227,14 +227,8 @@ def delete_usuario(
             detail="No puedes eliminar tu propia cuenta de administrador"
         )
     
-    # Verificar que el usuario no esté ya inactivo
-    if not user.is_active:
-        raise HTTPException(
-            status_code=400, 
-            detail="El usuario ya está inactivo"
-        )
-    
-    user.is_active = False
+    # Eliminar el usuario completamente de la base de datos
+    db.delete(user)
     db.commit()
     
     return {"message": "Usuario eliminado correctamente"}

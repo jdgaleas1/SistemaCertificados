@@ -303,24 +303,40 @@ async def import_xlsx_estructura_cdp(
         content = await file.read()
         df = pd.read_excel(io.BytesIO(content))
         
-        # Definir columnas esperadas (TUS columnas exactas)
-        expected_columns = [
-            'Nombres Estudiante',
-            'Apellidos Estudiante', 
-            'Número de cédula estudiante',
-            'Correo estudiante',
-            'Curso',
-            'Estudiante Activo/Inactivo',
-            'Instructor a cargo del curso'
-        ]
+        # Log para debugging
+        print(f"Columnas encontradas en el Excel: {list(df.columns)}")
+        print(f"Primeras 3 filas del Excel: {df.head(3).to_dict()}")
         
-        # Validar que todas las columnas requeridas estén presentes
-        missing_columns = [col for col in expected_columns if col not in df.columns]
-        if missing_columns:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"El archivo debe contener las columnas: {', '.join(missing_columns)}"
-            )
+        # Mapeo flexible de columnas (buscar por coincidencia parcial)
+        column_mapping = {}
+        expected_columns = {
+            'nombres': ['Nombres Estudiante', 'nombres estudiante', 'Nombres', 'nombres'],
+            'apellidos': ['Apellidos Estudiante', 'apellidos estudiante', 'Apellidos', 'apellidos'],
+            'cedula': ['Número de cédula estudiante', 'Numero de cedula estudiante', 'Cédula', 'Cedula', 'cedula'],
+            'email': ['Correo estudiante', 'correo estudiante', 'Email', 'email', 'Correo', 'correo'],
+            'curso': ['Curso', 'curso'],
+            'estado': ['Estudiante Activo/Inactivo', 'estudiante activo/inactivo', 'Estado', 'estado'],
+            'instructor': ['Instructor a cargo del curso', 'instructor a cargo del curso', 'Instructor', 'instructor']
+        }
+        
+        # Buscar columnas por coincidencia
+        for key, possible_names in expected_columns.items():
+            found = False
+            for col in df.columns:
+                if any(name.lower() in col.lower() for name in possible_names):
+                    column_mapping[key] = col
+                    found = True
+                    break
+            if not found:
+                print(f"No se encontró columna para: {key}")
+                print(f"Buscando: {possible_names}")
+                print(f"Columnas disponibles: {list(df.columns)}")
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"No se encontró columna para {key}. Buscando: {possible_names}. Columnas disponibles: {', '.join(df.columns)}"
+                )
+        
+        print(f"Mapeo de columnas: {column_mapping}")
         
         # Limpiar datos
         df = df.fillna('')
@@ -339,14 +355,14 @@ async def import_xlsx_estructura_cdp(
         
         for index, row in df.iterrows():
             try:
-                # Limpiar datos de la fila
-                nombres = str(row['Nombres Estudiante']).strip()
-                apellidos = str(row['Apellidos Estudiante']).strip()
-                cedula = str(row['Número de cédula estudiante']).strip()
-                email = str(row['Correo estudiante']).strip().lower()
-                curso_nombre = str(row['Curso']).strip()
-                estado_texto = str(row['Estudiante Activo/Inactivo']).strip()
-                instructor_email = str(row['Instructor a cargo del curso']).strip().lower()
+                # Limpiar datos de la fila usando el mapeo de columnas
+                nombres = str(row[column_mapping['nombres']]).strip()
+                apellidos = str(row[column_mapping['apellidos']]).strip()
+                cedula = str(row[column_mapping['cedula']]).strip()
+                email = str(row[column_mapping['email']]).strip().lower()
+                curso_nombre = str(row[column_mapping['curso']]).strip()
+                estado_texto = str(row[column_mapping['estado']]).strip()
+                instructor_email = str(row[column_mapping['instructor']]).strip().lower()
                 
                 # Validar datos obligatorios
                 if not all([nombres, apellidos, cedula, email, curso_nombre]):
@@ -475,6 +491,10 @@ async def import_xlsx_estructura_cdp(
         
     except Exception as e:
         db.rollback()
+        print(f"Error completo al procesar Excel: {str(e)}")
+        print(f"Tipo de error: {type(e).__name__}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=400, detail=f"Error procesando archivo Excel: {str(e)}")
 
 # GESTIÓN DE INSCRIPCIONES

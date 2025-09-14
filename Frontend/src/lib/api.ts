@@ -276,32 +276,50 @@ export async function importarEstudiantesCSV(cursoId: string, file: File) {
 
 // Nueva versión para importar XLSX directamente
 export async function importarEstudiantesXLSX(file: File) { 
+  console.log('📤 Iniciando importación de Excel:', file.name, file.size, 'bytes');
+  
   const formData = new FormData();
   formData.append('file', file);
   
   const session = await getSession();
   const url = `${CURSOS_SERVICE_URL}/inscripciones/xlsx`; 
   
+  console.log('🔗 URL del endpoint:', url);
+  console.log('🔑 Sesión:', session ? 'Activa' : 'No activa');
+  
   const headers: Record<string, string> = {};
   if (session?.accessToken) {
     headers.Authorization = `Bearer ${session.accessToken}`;
+    console.log('🔐 Token de autorización incluido');
+  } else {
+    console.log('⚠️ Sin token de autorización');
   }
   
-  const response = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: formData,
-  });
-  
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new ApiError(
-      response.status,
-      errorData.detail || `HTTP ${response.status}: ${response.statusText}`
-    );
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    
+    console.log('📡 Respuesta del servidor:', response.status, response.statusText);
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('❌ Error del servidor:', errorData);
+      throw new ApiError(
+        response.status,
+        errorData.detail || `HTTP ${response.status}: ${response.statusText}`
+      );
+    }
+    
+    const result = await response.json();
+    console.log('✅ Importación exitosa:', result);
+    return result;
+  } catch (error) {
+    console.error('💥 Error en la importación:', error);
+    throw error;
   }
-  
-  return response.json();
 }
 
 // Funciones adicionales para gestión de inscripciones

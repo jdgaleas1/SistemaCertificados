@@ -1,5 +1,15 @@
 import { useState, useCallback } from 'react';
-import { api } from '@/lib/api';
+import { 
+  getPlantillasEmail, 
+  getPlantillaEmail, 
+  createPlantillaEmail, 
+  updatePlantillaEmail, 
+  deletePlantillaEmail,
+  enviarEmailIndividual,
+  enviarEmailMasivo,
+  getEstadisticasEmail,
+  getLogsEmail
+} from '@/lib/api';
 
 export interface PlantillaEmail {
   id: string;
@@ -73,14 +83,14 @@ export const useEmail = () => {
 
   // ==================== PLANTILLAS DE EMAIL ====================
 
-  const getPlantillasEmail = useCallback(async (): Promise<PlantillaEmail[]> => {
+  const getPlantillasEmailList = useCallback(async (): Promise<PlantillaEmail[]> => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get('/plantillas-email');
-      return response.data;
+      const data = await getPlantillasEmail();
+      return data;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Error obteniendo plantillas de email';
+      const errorMessage = err.message || 'Error obteniendo plantillas de email';
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -88,14 +98,14 @@ export const useEmail = () => {
     }
   }, []);
 
-  const getPlantillaEmail = useCallback(async (id: string): Promise<PlantillaEmail> => {
+  const getPlantillaEmailById = useCallback(async (id: string): Promise<PlantillaEmail> => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get(`/plantillas-email/${id}`);
-      return response.data;
+      const data = await getPlantillaEmail(id);
+      return data;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Error obteniendo plantilla de email';
+      const errorMessage = err.message || 'Error obteniendo plantilla de email';
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -103,14 +113,14 @@ export const useEmail = () => {
     }
   }, []);
 
-  const createPlantillaEmail = useCallback(async (data: Omit<PlantillaEmail, 'id' | 'fecha_creacion' | 'fecha_actualizacion' | 'variables_disponibles'>): Promise<PlantillaEmail> => {
+  const createPlantillaEmailData = useCallback(async (data: Omit<PlantillaEmail, 'id' | 'fecha_creacion' | 'fecha_actualizacion' | 'variables_disponibles'>): Promise<PlantillaEmail> => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.post('/plantillas-email', data);
-      return response.data;
+      const result = await createPlantillaEmail(data);
+      return result;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Error creando plantilla de email';
+      const errorMessage = err.message || 'Error creando plantilla de email';
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -118,14 +128,14 @@ export const useEmail = () => {
     }
   }, []);
 
-  const updatePlantillaEmail = useCallback(async (id: string, data: Partial<PlantillaEmail>): Promise<PlantillaEmail> => {
+  const updatePlantillaEmailData = useCallback(async (id: string, data: Partial<PlantillaEmail>): Promise<PlantillaEmail> => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.put(`/plantillas-email/${id}`, data);
-      return response.data;
+      const result = await updatePlantillaEmail(id, data);
+      return result;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Error actualizando plantilla de email';
+      const errorMessage = err.message || 'Error actualizando plantilla de email';
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -133,13 +143,13 @@ export const useEmail = () => {
     }
   }, []);
 
-  const deletePlantillaEmail = useCallback(async (id: string): Promise<void> => {
+  const deletePlantillaEmailData = useCallback(async (id: string): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
-      await api.delete(`/plantillas-email/${id}`);
+      await deletePlantillaEmail(id);
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Error eliminando plantilla de email';
+      const errorMessage = err.message || 'Error eliminando plantilla de email';
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -149,14 +159,14 @@ export const useEmail = () => {
 
   // ==================== ENVÍO DE CORREOS ====================
 
-  const enviarEmailIndividual = useCallback(async (data: EnvioIndividualRequest): Promise<LogEmail> => {
+  const enviarEmailIndividualData = useCallback(async (data: EnvioIndividualRequest): Promise<LogEmail> => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.post('/enviar-individual', data);
-      return response.data;
+      const result = await enviarEmailIndividual(data);
+      return result;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Error enviando email individual';
+      const errorMessage = err.message || 'Error enviando email individual';
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -164,14 +174,14 @@ export const useEmail = () => {
     }
   }, []);
 
-  const enviarEmailMasivo = useCallback(async (data: EnvioMasivoRequest): Promise<EnvioMasivoResponse> => {
+  const enviarEmailMasivoData = useCallback(async (data: EnvioMasivoRequest): Promise<EnvioMasivoResponse> => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.post('/enviar-masivo', data);
-      return response.data;
+      const result = await enviarEmailMasivo(data);
+      return result;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Error enviando emails masivos';
+      const errorMessage = err.message || 'Error enviando emails masivos';
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -181,14 +191,14 @@ export const useEmail = () => {
 
   // ==================== ESTADÍSTICAS Y LOGS ====================
 
-  const getEstadisticasEmail = useCallback(async (): Promise<EstadisticasEmail> => {
+  const getEstadisticasEmailData = useCallback(async (): Promise<EstadisticasEmail> => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get('/estadisticas-email');
-      return response.data;
+      const data = await getEstadisticasEmail();
+      return data;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Error obteniendo estadísticas';
+      const errorMessage = err.message || 'Error obteniendo estadísticas';
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -196,7 +206,7 @@ export const useEmail = () => {
     }
   }, []);
 
-  const getLogsEmail = useCallback(async (params?: {
+  const getLogsEmailData = useCallback(async (params?: {
     skip?: number;
     limit?: number;
     estado?: string;
@@ -207,7 +217,7 @@ export const useEmail = () => {
       const data = await getLogsEmail(params);
       return data;
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Error obteniendo logs de email';
+      const errorMessage = err.message || 'Error obteniendo logs de email';
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -246,19 +256,19 @@ export const useEmail = () => {
     error,
     
     // Plantillas de email
-    getPlantillasEmail,
-    getPlantillaEmail,
-    createPlantillaEmail,
-    updatePlantillaEmail,
-    deletePlantillaEmail,
+    getPlantillasEmail: getPlantillasEmailList,
+    getPlantillaEmail: getPlantillaEmailById,
+    createPlantillaEmail: createPlantillaEmailData,
+    updatePlantillaEmail: updatePlantillaEmailData,
+    deletePlantillaEmail: deletePlantillaEmailData,
     
     // Envío de correos
-    enviarEmailIndividual,
-    enviarEmailMasivo,
+    enviarEmailIndividual: enviarEmailIndividualData,
+    enviarEmailMasivo: enviarEmailMasivoData,
     
     // Estadísticas y logs
-    getEstadisticasEmail,
-    getLogsEmail,
+    getEstadisticasEmail: getEstadisticasEmailData,
+    getLogsEmail: getLogsEmailData,
     
     // Utilidades
     procesarVariables,

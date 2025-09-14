@@ -1,6 +1,6 @@
 # app/schemas.py - CERTIFICADOS SERVICE
 from pydantic import BaseModel, EmailStr, Field, validator
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Dict
 from datetime import datetime
 from uuid import UUID
 from app.models import EstadoEmail

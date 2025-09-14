@@ -42,6 +42,22 @@ class PlantillaEmail(Base):
     fecha_creacion = Column(DateTime(timezone=True), server_default=func.now())
     fecha_actualizacion = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
+class Usuario(Base):
+    """Modelo de usuario para el servicio de certificados (referencia)"""
+    __tablename__ = "usuarios"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    nombre = Column(String(100), nullable=False)
+    apellido = Column(String(100), nullable=False)
+    email = Column(String(255), nullable=False, unique=True, index=True)
+    cedula = Column(String(20), nullable=True)
+    is_active = Column(Boolean, default=True)
+    fecha_creacion = Column(DateTime(timezone=True), server_default=func.now())
+    
+    @property
+    def nombre_completo(self):
+        return f"{self.nombre} {self.apellido}"
+
 class LogEmail(Base):
     """Log de todos los correos enviados"""
     __tablename__ = "logs_email"

@@ -6,6 +6,7 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useCursos, useEstudiantesCurso } from '@/hooks/useCursos';
 import ConfiguracionLotes from '@/components/correos/ConfiguracionLotes';
 import ProgresoEnvio from '@/components/correos/ProgresoEnvio';
+import { listTemplates } from '@/lib/api';
 
 interface PlantillaCertificado {
   id: string;
@@ -69,14 +70,20 @@ export default function EnvioMasivoPage() {
 
   const loadPlantillasCertificado = async () => {
     try {
-      // Aquí harías la llamada a la API para obtener las plantillas de certificados
-      // Por ahora simulamos datos
+      // Llamada real a la API para obtener las plantillas de certificados
+      const data = await listTemplates();
+      setPlantillasCertificado(data.map((template: any) => ({
+        id: template.id,
+        nombre: template.nombre,
+        descripcion: template.descripcion
+      })));
+    } catch (err) {
+      console.error('Error cargando plantillas de certificado:', err);
+      // Fallback a datos simulados si hay error
       setPlantillasCertificado([
         { id: '1', nombre: 'Plantilla Básica', descripcion: 'Plantilla estándar para certificados' },
         { id: '2', nombre: 'Plantilla Avanzada', descripcion: 'Plantilla con diseño personalizado' }
       ]);
-    } catch (err) {
-      console.error('Error cargando plantillas de certificado:', err);
     }
   };
 
@@ -105,7 +112,7 @@ export default function EnvioMasivoPage() {
       });
 
       const destinatariosIds = estudiantes?.estudiantes
-        ?.map(estudiante => estudiante.id)
+        ?.map(estudiante => estudiante.estudiante_id)
         ?.filter(id => id !== undefined && id !== null) || [];
       
       if (destinatariosIds.length === 0) {
@@ -370,12 +377,12 @@ export default function EnvioMasivoPage() {
                   <div className="space-y-2">
                     {estudiantes?.estudiantes?.map((estudiante, index) => (
                       <div
-                        key={estudiante.id || `estudiante-${index}`}
+                        key={estudiante.estudiante_id || `estudiante-${index}`}
                         className="flex items-center justify-between p-3 bg-gray-50 rounded-md"
                       >
                         <div>
                           <p className="text-sm font-medium text-gray-900">
-                            {estudiante.nombre} {estudiante.apellido}
+                            {estudiante.nombre_completo}
                           </p>
                           <p className="text-xs text-gray-500">
                             {estudiante.email}

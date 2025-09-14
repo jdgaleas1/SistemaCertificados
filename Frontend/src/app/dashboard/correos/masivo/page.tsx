@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useEmail, PlantillaEmail } from '@/hooks/useEmail';
+import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useCursos, useInscripcionesCurso } from '@/hooks/useCursos';
 import { useCursos as useCursosHook } from '@/hooks/useCursos';
 import ConfiguracionLotes from '@/components/correos/ConfiguracionLotes';
@@ -159,6 +160,7 @@ export default function EnvioMasivoPage() {
   }
 
   return (
+    <DashboardLayout>
     <div className="max-w-6xl mx-auto p-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">
@@ -435,5 +437,6 @@ export default function EnvioMasivoPage() {
         </div>
       )}
     </div>
+        </DashboardLayout>
   );
 }

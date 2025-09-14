@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useEmail, PlantillaEmail } from '@/hooks/useEmail';
 import { useInscripciones } from '@/hooks/useInscripciones';
 
@@ -167,7 +168,8 @@ export default function EnvioIndividualPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
+    <DashboardLayout>
+      <div className="max-w-6xl mx-auto p-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">
           Envío Individual
@@ -523,5 +525,6 @@ export default function EnvioIndividualPage() {
         </div>
       )}
     </div>
+        </DashboardLayout>
   );
 }

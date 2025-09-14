@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useEmail, PlantillaEmail } from '@/hooks/useEmail';
+import DashboardLayout from "@/components/layout/DashboardLayout";
 import PlantillaEmailEditor from '@/components/correos/PlantillaEmailEditor';
 import PlantillasEmailList from '@/components/correos/PlantillasEmailList';
 
@@ -99,6 +100,7 @@ export default function PlantillasEmailPage() {
   }
 
   return (
+        <DashboardLayout>
     <div className="max-w-7xl mx-auto p-6">
       <div className="mb-8">
         <div className="flex items-center justify-between">
@@ -147,5 +149,6 @@ export default function PlantillasEmailPage() {
         loading={loadingData}
       />
     </div>
+     </DashboardLayout>
   );
 }

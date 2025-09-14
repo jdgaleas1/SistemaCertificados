@@ -473,3 +473,101 @@ def obtener_logs_email(
     logs = query.order_by(LogEmail.fecha_envio.desc()).offset(skip).limit(limit).all()
     
     return [LogEmailResponse.from_orm(log) for log in logs]
+
+# ===================== PRUEBAS Y UTILIDADES =====================
+
+@router.post("/test-generate-certificate/{template_id}")
+def test_generate_certificate(
+    template_id: str,
+    variables: Dict[str, str],
+    db: Session = Depends(get_db),
+    user_info: dict = Depends(require_auth)
+):
+    """Generar certificado de prueba con variables específicas"""
+    
+    from app.email_service import EmailService
+    
+    # Obtener plantilla
+    plantilla = db.query(Plantilla).filter(Plantilla.id == template_id).first()
+    if not plantilla:
+        raise HTTPException(status_code=404, detail="Plantilla no encontrada")
+    
+    # Generar PDF de prueba
+    email_service = EmailService(db)
+    try:
+        pdf_bytes = email_service.generar_pdf_certificado(plantilla, variables)
+        
+        # Convertir a base64 para respuesta
+        import base64
+        pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
+        
+        return {
+            "success": True,
+            "message": "Certificado generado exitosamente",
+            "pdf_base64": pdf_base64,
+            "variables_utilizadas": variables,
+            "plantilla_id": template_id
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generando certificado: {str(e)}")
+
+@router.get("/available-variables")
+def get_available_variables():
+    """Obtener lista de variables disponibles para plantillas"""
+    
+    variables = [
+        {
+            "key": "NOMBRE",
+            "label": "Nombre",
+            "description": "Nombre del estudiante",
+            "example": "Juan"
+        },
+        {
+            "key": "APELLIDO", 
+            "label": "Apellido",
+            "description": "Apellido del estudiante",
+            "example": "Pérez"
+        },
+        {
+            "key": "NOMBRE_COMPLETO",
+            "label": "Nombre Completo", 
+            "description": "Nombre y apellido completo",
+            "example": "Juan Pérez"
+        },
+        {
+            "key": "EMAIL",
+            "label": "Email",
+            "description": "Correo electrónico del estudiante",
+            "example": "juan.perez@email.com"
+        },
+        {
+            "key": "CEDULA",
+            "label": "Cédula",
+            "description": "Número de cédula del estudiante", 
+            "example": "12345678"
+        },
+        {
+            "key": "CURSO",
+            "label": "Curso",
+            "description": "Nombre del curso",
+            "example": "Desarrollo Web"
+        },
+        {
+            "key": "FECHA",
+            "label": "Fecha",
+            "description": "Fecha actual",
+            "example": "15/12/2024"
+        },
+        {
+            "key": "INSTITUCION",
+            "label": "Institución",
+            "description": "Nombre de la institución",
+            "example": "Centro de Desarrollo Profesional CDP"
+        }
+    ]
+    
+    return {
+        "variables": variables,
+        "usage": "Usa {VARIABLE} en el texto de la plantilla para insertar valores dinámicos"
+    }

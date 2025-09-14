@@ -219,6 +219,9 @@ export default function CanvasEditor({
                 );
               }
               
+              // Detectar si el texto contiene variables
+              const hasVariables = el.text && /\{[A-Z_]+\}/.test(el.text);
+              
               return (
                 <KonvaText
                   key={el.id}
@@ -229,7 +232,7 @@ export default function CanvasEditor({
                   fontSize={el.fontSize}
                   fontFamily={el.fontFamily}
                   fontStyle={el.fontStyle || 'normal'}
-                  fill={el.fill}
+                  fill={hasVariables ? '#2563eb' : el.fill} // Color azul para variables
                   align={el.align || 'left'}
                   width={el.width || canvasSize.width}
                   stroke={isSelected ? '#007bff' : undefined}

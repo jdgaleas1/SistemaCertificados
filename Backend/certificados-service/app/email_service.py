@@ -149,7 +149,12 @@ class EmailService:
         """
         try:
             # Procesar el texto con variables
-            texto = self.procesar_variables(field.get("text", ""), variables)
+            texto_original = field.get("text", "")
+            texto = self.procesar_variables(texto_original, variables)
+            
+            # Si el texto está vacío después del procesamiento, no agregar nada
+            if not texto.strip():
+                return
             
             # Coordenadas escaladas (invertir Y para PDF)
             x = field.get("x", 0) * scale_x
@@ -189,9 +194,15 @@ class EmailService:
                 canvas_obj.drawRightString(x, y, texto)
             else:
                 canvas_obj.drawString(x, y, texto)
+            
+            # Log para debugging
+            if texto_original != texto:
+                print(f"  📝 Texto procesado: '{texto_original}' -> '{texto}'")
                 
         except Exception as e:
             print(f"Error agregando texto al PDF: {e}")
+            print(f"  Campo: {field}")
+            print(f"  Variables: {variables}")
     
     def enviar_email_smtp2go(self, destinatario: str, asunto: str, contenido_html: str, 
                            adjunto_pdf: Optional[bytes] = None, nombre_adjunto: str = "certificado.pdf") -> Tuple[bool, str]:
@@ -385,11 +396,14 @@ class EmailService:
                     
                     # Preparar variables personalizadas
                     variables = {
-                        "NOMBRE": usuario.nombre,
-                        "APELLIDO": usuario.apellido,
-                        "NOMBRE_COMPLETO": usuario.nombre_completo,
-                        "EMAIL": usuario.email,
-                        "CEDULA": usuario.cedula
+                        "NOMBRE": usuario.nombre or "",
+                        "APELLIDO": usuario.apellido or "",
+                        "NOMBRE_COMPLETO": usuario.nombre_completo or "",
+                        "EMAIL": usuario.email or "",
+                        "CEDULA": usuario.cedula or "",
+                        "CURSO": variables_globales.get("CURSO", "") if variables_globales else "",
+                        "FECHA": datetime.now().strftime("%d/%m/%Y"),
+                        "INSTITUCION": "Centro de Desarrollo Profesional CDP"
                     }
                     
                     # Agregar variables globales

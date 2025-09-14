@@ -526,3 +526,34 @@ export const getLogsEmail = async (params?: any) => {
   if (!response.ok) throw new Error("Error al obtener logs de email");
   return response.json();
 };
+
+// ==================== FUNCIONES DE PRUEBA DE CERTIFICADOS ====================
+
+export const testGenerateCertificate = async (templateId: string, variables: Record<string, string>) => {
+  const session = await getSession();
+  const response = await fetch(`${CERTIFICADOS_SERVICE_URL}/test-generate-certificate/${templateId}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${session?.accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(variables),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || "Error al generar certificado de prueba");
+  }
+  return response.json();
+};
+
+export const getAvailableVariables = async () => {
+  const session = await getSession();
+  const response = await fetch(`${CERTIFICADOS_SERVICE_URL}/available-variables`, {
+    headers: {
+      Authorization: `Bearer ${session?.accessToken}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) throw new Error("Error al obtener variables disponibles");
+  return response.json();
+};

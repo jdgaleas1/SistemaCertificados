@@ -226,8 +226,18 @@ def get_plantillas_email(
         # Extraer variables del contenido HTML
         variables = extraer_variables_plantilla(plantilla.contenido_html) if plantilla.contenido_html else []
         
-        plantilla_dict = PlantillaEmailResponse.from_orm(plantilla).dict()
-        plantilla_dict['variables_disponibles'] = variables
+        # Crear el diccionario manualmente para evitar problemas con from_orm
+        plantilla_dict = {
+            "id": plantilla.id,
+            "nombre": plantilla.nombre,
+            "descripcion": plantilla.descripcion,
+            "asunto": plantilla.asunto,
+            "contenido_html": plantilla.contenido_html,
+            "variables_disponibles": variables,
+            "is_active": plantilla.is_active,
+            "fecha_creacion": plantilla.fecha_creacion,
+            "fecha_actualizacion": plantilla.fecha_actualizacion
+        }
         result.append(plantilla_dict)
     
     return result
@@ -257,8 +267,17 @@ def create_plantilla_email(
         db.refresh(db_plantilla)
         
         # Preparar respuesta
-        plantilla_response = PlantillaEmailResponse.from_orm(db_plantilla).dict()
-        plantilla_response['variables_disponibles'] = variables
+        plantilla_response = {
+            "id": db_plantilla.id,
+            "nombre": db_plantilla.nombre,
+            "descripcion": db_plantilla.descripcion,
+            "asunto": db_plantilla.asunto,
+            "contenido_html": db_plantilla.contenido_html,
+            "variables_disponibles": variables,
+            "is_active": db_plantilla.is_active,
+            "fecha_creacion": db_plantilla.fecha_creacion,
+            "fecha_actualizacion": db_plantilla.fecha_actualizacion
+        }
         
         return plantilla_response
         
@@ -281,8 +300,18 @@ def get_plantilla_email(
     # Extraer variables del contenido HTML
     variables = extraer_variables_plantilla(plantilla.contenido_html) if plantilla.contenido_html else []
     
-    plantilla_response = PlantillaEmailResponse.from_orm(plantilla).dict()
-    plantilla_response['variables_disponibles'] = variables
+    # Crear el diccionario manualmente para evitar problemas con from_orm
+    plantilla_response = {
+        "id": plantilla.id,
+        "nombre": plantilla.nombre,
+        "descripcion": plantilla.descripcion,
+        "asunto": plantilla.asunto,
+        "contenido_html": plantilla.contenido_html,
+        "variables_disponibles": variables,
+        "is_active": plantilla.is_active,
+        "fecha_creacion": plantilla.fecha_creacion,
+        "fecha_actualizacion": plantilla.fecha_actualizacion
+    }
     
     return plantilla_response
 
@@ -320,9 +349,18 @@ def update_plantilla_email(
     db.refresh(plantilla)
     
     # Preparar respuesta
-    variables = json.loads(plantilla.variables_disponibles) if plantilla.variables_disponibles else []
-    plantilla_response = PlantillaEmailResponse.from_orm(plantilla).dict()
-    plantilla_response['variables_disponibles'] = variables
+    variables = extraer_variables_plantilla(plantilla.contenido_html) if plantilla.contenido_html else []
+    plantilla_response = {
+        "id": plantilla.id,
+        "nombre": plantilla.nombre,
+        "descripcion": plantilla.descripcion,
+        "asunto": plantilla.asunto,
+        "contenido_html": plantilla.contenido_html,
+        "variables_disponibles": variables,
+        "is_active": plantilla.is_active,
+        "fecha_creacion": plantilla.fecha_creacion,
+        "fecha_actualizacion": plantilla.fecha_actualizacion
+    }
     
     return plantilla_response
 

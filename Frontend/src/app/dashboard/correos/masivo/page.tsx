@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useEmail, PlantillaEmail } from '@/hooks/useEmail';
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { useCursos, useInscripcionesCurso } from '@/hooks/useCursos';
-import { useCursos as useCursosHook } from '@/hooks/useCursos';
+import { useCursos, useEstudiantesCurso } from '@/hooks/useCursos';
 import ConfiguracionLotes from '@/components/correos/ConfiguracionLotes';
 import ProgresoEnvio from '@/components/correos/ProgresoEnvio';
 
@@ -22,7 +21,7 @@ export default function EnvioMasivoPage() {
     error: emailError
   } = useEmail();
 
-  const { cursos, loading: cursosLoading } = useCursosHook();
+  const { cursos, loading: cursosLoading } = useCursos();
   const [plantillasEmail, setPlantillasEmail] = useState<PlantillaEmail[]>([]);
   const [plantillasCertificado, setPlantillasCertificado] = useState<PlantillaCertificado[]>([]);
   
@@ -50,7 +49,7 @@ export default function EnvioMasivoPage() {
   const [resultadoEnvio, setResultadoEnvio] = useState<any>(null);
 
   // Inscripciones del curso seleccionado
-  const { inscripciones, loading: inscripcionesLoading } = useInscripcionesCurso(
+  const { estudiantes, loading: inscripcionesLoading } = useEstudiantesCurso(
     cursoSeleccionado || null
   );
 
@@ -87,25 +86,25 @@ export default function EnvioMasivoPage() {
       return;
     }
 
-    if (inscripciones.length === 0) {
+    if (estudiantes?.estudiantes?.length === 0) {
       alert('No hay estudiantes inscritos en este curso');
       return;
     }
 
-    if (!confirm(`¿Estás seguro de enviar ${inscripciones.length} correos?`)) {
+    if (!confirm(`¿Estás seguro de enviar ${estudiantes?.estudiantes?.length || 0} correos?`)) {
       return;
     }
 
     try {
       setEnviando(true);
       setProgresoEnvio({
-        total: inscripciones.length,
+        total: estudiantes?.estudiantes?.length || 0,
         enviados: 0,
         errores: 0,
         tiempoInicio: Date.now()
       });
 
-      const destinatariosIds = inscripciones.map(inscripcion => inscripcion.estudiante.id);
+      const destinatariosIds = estudiantes?.estudiantes?.map(estudiante => estudiante.id) || [];
       
       const resultado = await enviarEmailMasivo({
         plantilla_email_id: plantillaEmailSeleccionada,
@@ -337,7 +336,7 @@ export default function EnvioMasivoPage() {
               <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               </div>
-            ) : inscripciones.length === 0 ? (
+            ) : estudiantes?.estudiantes?.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 No hay estudiantes inscritos en este curso
               </div>
@@ -355,7 +354,7 @@ export default function EnvioMasivoPage() {
                         {cursoActual?.nombre}
                       </h3>
                       <div className="mt-1 text-sm text-blue-700">
-                        <p>{inscripciones.length} estudiantes inscritos</p>
+                        <p>{estudiantes?.estudiantes?.length || 0} estudiantes inscritos</p>
                       </div>
                     </div>
                   </div>
@@ -363,21 +362,21 @@ export default function EnvioMasivoPage() {
 
                 <div className="max-h-64 overflow-y-auto">
                   <div className="space-y-2">
-                    {inscripciones.map((inscripcion) => (
+                    {estudiantes?.estudiantes?.map((estudiante) => (
                       <div
-                        key={inscripcion.id}
+                        key={estudiante.id}
                         className="flex items-center justify-between p-3 bg-gray-50 rounded-md"
                       >
                         <div>
                           <p className="text-sm font-medium text-gray-900">
-                            {inscripcion.estudiante.nombre} {inscripcion.estudiante.apellido}
+                            {estudiante.nombre} {estudiante.apellido}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {inscripcion.estudiante.email}
+                            {estudiante.email}
                           </p>
                         </div>
                         <span className="text-xs text-gray-500">
-                          {inscripcion.estudiante.cedula}
+                          {estudiante.cedula}
                         </span>
                       </div>
                     ))}
@@ -395,12 +394,12 @@ export default function EnvioMasivoPage() {
                   Enviar Correos
                 </h3>
                 <p className="text-sm text-gray-500">
-                  {inscripciones.length} destinatarios seleccionados
+                  {estudiantes?.estudiantes?.length || 0} destinatarios seleccionados
                 </p>
               </div>
               <button
                 onClick={handleEnviar}
-                disabled={!cursoSeleccionado || !plantillaEmailSeleccionada || inscripciones.length === 0 || emailLoading}
+                disabled={!cursoSeleccionado || !plantillaEmailSeleccionada || (estudiantes?.estudiantes?.length || 0) === 0 || emailLoading}
                 className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {emailLoading ? 'Enviando...' : 'Enviar Correos'}

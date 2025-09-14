@@ -2,7 +2,7 @@
 import os
 import uuid
 import json
-from typing import List
+from typing import List, Dict
 from fastapi import APIRouter, HTTPException, Depends, status, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError

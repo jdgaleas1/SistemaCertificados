@@ -87,13 +87,21 @@ class EmailService:
                         img_buffer.seek(0)
                         pil_image = Image.open(img_buffer)
                         
-                        # Guardar imagen temporalmente para ReportLab
-                        temp_img_buffer = BytesIO()
-                        pil_image.save(temp_img_buffer, format='PNG')
-                        temp_img_buffer.seek(0)
+                        # Guardar imagen temporalmente en disco para ReportLab
+                        import tempfile
+                        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
+                            pil_image.save(temp_file.name, format='PNG')
+                            temp_file_path = temp_file.name
                         
-                        # Dibujar imagen de fondo usando el buffer temporal
-                        c.drawImage(temp_img_buffer, 0, 0, width=pdf_width, height=pdf_height)
+                        # Dibujar imagen de fondo usando la ruta temporal
+                        c.drawImage(temp_file_path, 0, 0, width=pdf_width, height=pdf_height)
+                        
+                        # Limpiar archivo temporal
+                        import os
+                        try:
+                            os.unlink(temp_file_path)
+                        except:
+                            pass
                         
                         # Procesar campos de la plantilla
                         if plantilla.fields_json:
@@ -114,6 +122,10 @@ class EmailService:
                         
                 except Exception as e:
                     print(f"Error procesando imagen de fondo: {e}")
+                    print(f"  URL de imagen: {image_url}")
+                    print(f"  Plantilla ID: {plantilla.id}")
+                    import traceback
+                    traceback.print_exc()
             
             # Si no hay imagen de fondo o falló, crear PDF básico
             c = canvas.Canvas(buffer, pagesize=landscape(A4))
@@ -272,13 +284,19 @@ class EmailService:
             # Generar PDF si hay plantilla de certificado
             adjunto_pdf = None
             if envio_data.plantilla_certificado_id:
+                print(f"  📄 Generando PDF para plantilla: {envio_data.plantilla_certificado_id}")
                 plantilla = self.db.query(Plantilla).filter(
                     Plantilla.id == envio_data.plantilla_certificado_id
                 ).first()
                 
                 if plantilla:
+                    print(f"  📄 Plantilla encontrada: {plantilla.nombre}")
                     variables_pdf = envio_data.variables or {}
+                    print(f"  📄 Variables para PDF: {variables_pdf}")
                     adjunto_pdf = self.generar_pdf_certificado(plantilla, variables_pdf)
+                    print(f"  📄 PDF generado: {len(adjunto_pdf) if adjunto_pdf else 0} bytes")
+                else:
+                    print(f"  ❌ Plantilla no encontrada: {envio_data.plantilla_certificado_id}")
             
             # Enviar email
             exito, mensaje = self.enviar_email_smtp2go(
@@ -428,6 +446,11 @@ class EmailService:
                         plantilla_certificado_id=plantilla_certificado_id,
                         variables=variables
                     )
+                    
+                    print(f"  📧 Datos de envío:")
+                    print(f"     Email: {envio_data.destinatario_email}")
+                    print(f"     Plantilla certificado: {envio_data.plantilla_certificado_id}")
+                    print(f"     Variables: {envio_data.variables}")
                     
                     # Enviar email
                     log_result = self.enviar_email_individual(envio_data)

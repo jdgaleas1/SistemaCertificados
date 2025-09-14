@@ -32,7 +32,7 @@ export default function CertificadosServiceStatus() {
         nombre: 'Test Plantilla',
         descripcion: 'Plantilla de prueba',
         asunto: 'Test Subject',
-        contenido_html: '<p>Test content</p>',
+        contenido_html: '<html><body><h1>Test Plantilla</h1><p>Este es un contenido de prueba para verificar que el servicio funciona correctamente.</p><p>Variables disponibles: {NOMBRE}, {APELLIDO}, {EMAIL}</p></body></html>',
         is_active: true
       };
 

@@ -49,7 +49,8 @@ export default function EnvioIndividualPage() {
   // Obtener estudiantes únicos de las inscripciones
   const estudiantes: Estudiante[] = inscripciones.reduce((acc, inscripcion) => {
     const estudiante = inscripcion.estudiante;
-    if (!acc.find(e => e.id === estudiante.id)) {
+    // Validar que el estudiante existe y tiene id
+    if (estudiante && estudiante.id && !acc.find(e => e.id === estudiante.id)) {
       acc.push({
         id: estudiante.id,
         nombre: estudiante.nombre,

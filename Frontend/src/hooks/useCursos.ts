@@ -40,16 +40,59 @@ export function useCursos(filters?: CursosFilters) {
       
       const response: PaginatedCursosResponse = await getCursos(newFilters || filters);
       console.log('📊 Respuesta de cursos:', response);
+      console.log('📊 Tipo de respuesta:', typeof response);
+      console.log('📊 Claves de respuesta:', Object.keys(response));
+      console.log('📊 response.data:', response.data);
+      console.log('📊 response.data tipo:', typeof response.data);
+      console.log('📊 response.data longitud:', response.data?.length);
       
-      setCursos(response.data || []);
-      setPagination({
-        total: response.total || 0,
-        page: response.page || 1,
-        per_page: response.per_page || 25,
-        pages: response.pages || 0
-      });
+      // Manejar diferentes estructuras de respuesta
+      let cursosData = [];
+      let paginationData = {
+        total: 0,
+        page: 1,
+        per_page: 25,
+        pages: 0
+      };
+
+      if (response.data && Array.isArray(response.data)) {
+        // Estructura esperada: { data: [...], total: ..., page: ... }
+        cursosData = response.data;
+        paginationData = {
+          total: response.total || 0,
+          page: response.page || 1,
+          per_page: response.per_page || 25,
+          pages: response.pages || 0
+        };
+      } else if (Array.isArray(response)) {
+        // Si la respuesta es directamente un array
+        cursosData = response;
+        paginationData = {
+          total: response.length,
+          page: 1,
+          per_page: response.length,
+          pages: 1
+        };
+      } else if (response.cursos && Array.isArray(response.cursos)) {
+        // Si la respuesta tiene una clave 'cursos'
+        cursosData = response.cursos;
+        paginationData = {
+          total: response.total || response.cursos.length,
+          page: response.page || 1,
+          per_page: response.per_page || 25,
+          pages: response.pages || 1
+        };
+      } else {
+        console.warn('⚠️ Estructura de respuesta no reconocida:', response);
+        cursosData = [];
+      }
+
+      console.log('📊 Datos procesados:', { cursosData, paginationData });
       
-      console.log('✅ Cursos cargados exitosamente:', response.data?.length || 0, 'cursos');
+      setCursos(cursosData);
+      setPagination(paginationData);
+      
+      console.log('✅ Cursos cargados exitosamente:', cursosData.length, 'cursos');
     } catch (err: any) {
       console.error('❌ Error al cargar cursos:', err);
       setError(err.message || 'Error al cargar cursos');

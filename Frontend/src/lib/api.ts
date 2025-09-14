@@ -83,7 +83,14 @@ export async function apiCall(
     );
   }
 
-  return response.json();
+  const jsonData = await response.json();
+  console.log("API Response Data:", {
+    data: jsonData,
+    type: typeof jsonData,
+    keys: Object.keys(jsonData),
+    dataLength: jsonData.data?.length
+  });
+  return jsonData;
 }
 
 // Convenience methods
@@ -227,6 +234,10 @@ export async function getCursos(filters?: {
   try {
     const result = await cursosApi.get(endpoint);
     console.log('✅ Cursos obtenidos exitosamente:', result);
+    console.log('✅ Tipo de resultado:', typeof result);
+    console.log('✅ Claves del resultado:', Object.keys(result));
+    console.log('✅ result.data:', result.data);
+    console.log('✅ result.data longitud:', result.data?.length);
     return result;
   } catch (error) {
     console.error('❌ Error al obtener cursos:', error);

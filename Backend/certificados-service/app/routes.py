@@ -259,6 +259,7 @@ def create_plantilla_email(
             descripcion=plantilla.descripcion,
             asunto=plantilla.asunto,
             contenido_html=plantilla.contenido_html,
+            is_active=plantilla.is_active,
             variables_disponibles=json.dumps(variables) if variables else None
         )
         

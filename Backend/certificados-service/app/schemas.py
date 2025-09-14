@@ -42,7 +42,8 @@ class PlantillaEmailCreate(BaseModel):
     nombre: str = Field(..., min_length=3, max_length=150)
     descripcion: Optional[str] = Field(None, max_length=255)
     asunto: str = Field(..., min_length=5, max_length=255)
-    contenido_html: str = Field(..., min_length=50)
+    contenido_html: str = Field(..., min_length=10)  # Reducido de 50 a 10 caracteres
+    is_active: Optional[bool] = Field(True)  # Agregado campo is_active
     
     @validator('contenido_html')
     def validate_html(cls, v):

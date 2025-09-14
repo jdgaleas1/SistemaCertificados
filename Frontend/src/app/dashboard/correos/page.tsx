@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { Mail, Users, Send, Settings } from 'lucide-react';
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import CertificadosServiceStatus from "@/components/debug/CertificadosServiceStatus";
 
 export default function CorreosPage() {
   const opciones = [
@@ -156,10 +155,6 @@ export default function CorreosPage() {
           </div>
         </div>
 
-        {/* Debug Section */}
-        <div className="mt-8">
-          <CertificadosServiceStatus />
-        </div>
       </div>
     </DashboardLayout>
   );

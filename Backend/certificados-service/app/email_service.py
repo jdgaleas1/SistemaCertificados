@@ -83,6 +83,8 @@ class EmailService:
                         c = canvas.Canvas(buffer, pagesize=landscape(A4))
                         
                         # Agregar imagen de fondo
+                        # ReportLab necesita que el buffer esté en la posición 0
+                        img_buffer.seek(0)
                         c.drawImage(img_buffer, 0, 0, width=pdf_width, height=pdf_height)
                         
                         # Procesar campos de la plantilla
@@ -292,7 +294,21 @@ class EmailService:
         self.db.commit()
         self.db.refresh(log_email)
         
-        return LogEmailResponse.from_orm(log_email)
+        # Convertir metadatos de string JSON a dict si es necesario
+        log_data = {
+            "id": log_email.id,
+            "destinatario_email": log_email.destinatario_email,
+            "destinatario_nombre": log_email.destinatario_nombre,
+            "asunto": log_email.asunto,
+            "plantilla_email_id": log_email.plantilla_email_id,
+            "plantilla_certificado_id": log_email.plantilla_certificado_id,
+            "estado": log_email.estado,
+            "mensaje_error": log_email.mensaje_error,
+            "fecha_envio": log_email.fecha_envio,
+            "fecha_entrega": log_email.fecha_entrega,
+            "metadatos": json.loads(log_email.metadatos) if log_email.metadatos else None
+        }
+        return LogEmailResponse(**log_data)
     
     def enviar_email_masivo_lotes(self, plantilla_email_id: str, destinatarios_ids: List[str], 
                                  plantilla_certificado_id: Optional[str] = None,

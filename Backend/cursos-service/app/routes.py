@@ -352,6 +352,7 @@ async def import_xlsx_estructura_cdp(
         instructores_cache = {}
         cursos_cache = {}
         estudiantes_procesados = {}  # Para manejar cédulas duplicadas
+        inscripciones_procesadas = set()  # Para evitar duplicados en el mismo curso
         
         for index, row in df.iterrows():
             try:
@@ -451,6 +452,19 @@ async def import_xlsx_estructura_cdp(
                 estudiante_id = estudiante.id
                 
                 # 4. CREAR/ACTUALIZAR INSCRIPCIÓN
+                # Crear clave única para esta combinación estudiante-curso
+                inscripcion_key = f"{estudiante_id}_{curso_id}"
+                
+                # Verificar si ya procesamos esta combinación en este Excel
+                if inscripcion_key in inscripciones_procesadas:
+                    print(f"⚠️ Duplicado en Excel: {nombres} {apellidos} ya está en {curso_nombre}")
+                    errores.append(f"Fila {index + 2}: {nombres} {apellidos} ya está inscrito en {curso_nombre} (duplicado en el Excel)")
+                    continue
+                
+                # Marcar como procesado
+                inscripciones_procesadas.add(inscripcion_key)
+                
+                # Buscar inscripción existente en la base de datos
                 inscripcion_existente = db.query(Inscripcion).filter(
                     Inscripcion.curso_id == curso_id,
                     Inscripcion.estudiante_id == estudiante_id
@@ -460,6 +474,7 @@ async def import_xlsx_estructura_cdp(
                     # Actualizar inscripción existente
                     inscripcion_existente.is_active = is_active
                     inscripcion_existente.completado = False  # Reset por si cambió estado
+                    print(f"🔄 Actualizada inscripción: {nombres} {apellidos} en {curso_nombre}")
                 else:
                     # Crear nueva inscripción
                     inscripcion = Inscripcion(
@@ -469,6 +484,7 @@ async def import_xlsx_estructura_cdp(
                     )
                     db.add(inscripcion)
                     inscripciones_creadas += 1
+                    print(f"✅ Nueva inscripción: {nombres} {apellidos} en {curso_nombre}")
                 
                 # Registro exitoso
                 estado_str = "Activo" if is_active else "Inactivo"
@@ -480,6 +496,17 @@ async def import_xlsx_estructura_cdp(
         
         # Confirmar todos los cambios
         db.commit()
+        
+        # Estadísticas adicionales
+        estudiantes_unicos = len(estudiantes_procesados)
+        cursos_unicos = len(cursos_cache)
+        
+        print(f"📊 Resumen de importación:")
+        print(f"  - Filas procesadas: {len(df)}")
+        print(f"  - Estudiantes únicos: {estudiantes_unicos}")
+        print(f"  - Cursos únicos: {cursos_unicos}")
+        print(f"  - Inscripciones creadas: {inscripciones_creadas}")
+        print(f"  - Errores: {len(errores)}")
         
         return CSVImportResponse(
             total_procesados=len(df),
@@ -496,6 +523,54 @@ async def import_xlsx_estructura_cdp(
         import traceback
         print(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=400, detail=f"Error procesando archivo Excel: {str(e)}")
+
+# OBTENER INSCRIPCIONES DE UN ESTUDIANTE
+@router.get("/estudiantes/{estudiante_id}/inscripciones")
+def get_inscripciones_estudiante(
+    estudiante_id: str,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    """Obtener todas las inscripciones de un estudiante específico"""
+    
+    # Verificar que el estudiante existe
+    estudiante = db.query(Usuario).filter(Usuario.id == estudiante_id).first()
+    if not estudiante:
+        raise HTTPException(status_code=404, detail="Estudiante no encontrado")
+    
+    # Verificar permisos (estudiante solo puede ver sus propias inscripciones)
+    if current_user.rol == RolUsuario.ESTUDIANTE and str(current_user.id) != str(estudiante_id):
+        raise HTTPException(status_code=403, detail="Sin permisos para ver inscripciones de otros estudiantes")
+    
+    # Obtener inscripciones con datos del curso
+    inscripciones = db.query(Inscripcion, Curso, Usuario).join(
+        Curso, Inscripcion.curso_id == Curso.id
+    ).join(
+        Usuario, Curso.instructor_id == Usuario.id
+    ).filter(
+        Inscripcion.estudiante_id == estudiante_id,
+        Inscripcion.is_active == True
+    ).all()
+    
+    inscripciones_detalladas = []
+    for inscripcion, curso, instructor in inscripciones:
+        inscripcion_data = {
+            "inscripcion_id": inscripcion.id,
+            "curso_id": curso.id,
+            "curso_nombre": curso.nombre,
+            "instructor_nombre": instructor.nombre_completo,
+            "fecha_inscripcion": inscripcion.fecha_inscripcion,
+            "completado": inscripcion.completado,
+            "is_active": inscripcion.is_active
+        }
+        inscripciones_detalladas.append(inscripcion_data)
+    
+    return {
+        "estudiante_id": estudiante_id,
+        "estudiante_nombre": estudiante.nombre_completo,
+        "total_inscripciones": len(inscripciones_detalladas),
+        "inscripciones": inscripciones_detalladas
+    }
 
 # GESTIÓN DE INSCRIPCIONES
 @router.get("/inscripciones")

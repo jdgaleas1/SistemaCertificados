@@ -140,6 +140,9 @@ const handleImport = async () => {
                 <Text size="2" className="text-blue-600 block mb-2">
                   <strong>Nota:</strong> El instructor siempre será asignado por defecto. Los cursos se crearán automáticamente si no existen.
                 </Text>
+                <Text size="2" className="text-blue-600 block mb-2">
+                  <strong>Múltiples cursos:</strong> Un mismo estudiante puede estar inscrito en varios cursos diferentes. El sistema detectará y manejará automáticamente los duplicados.
+                </Text>
                 <Button
                   size="1"
                   variant="soft"

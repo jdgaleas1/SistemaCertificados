@@ -5,7 +5,8 @@ import {
   inscribirEstudiante,
   marcarInscripcionCompletada,
   desactivarInscripcion,
-  importarEstudiantesXLSX
+  importarEstudiantesXLSX,
+  getInscripcionesEstudiante
 } from '@/lib/api';
 import { 
   InscripcionDetallada,
@@ -152,6 +153,49 @@ export function useInscripcionesCurso(cursoId: string | null) {
 
   return {
     inscripciones,
+    loading,
+    error,
+    refetch: fetchInscripciones
+  };
+}
+
+// Hook específico para inscripciones de un estudiante (múltiples cursos)
+export function useInscripcionesEstudianteCompleto(estudianteId: string | null) {
+  const { data: session } = useSession();
+  const [inscripciones, setInscripciones] = useState<any[]>([]);
+  const [estudiante, setEstudiante] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchInscripciones = async () => {
+    if (!estudianteId) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getInscripcionesEstudiante(estudianteId);
+      setInscripciones(response.inscripciones);
+      setEstudiante({
+        id: response.estudiante_id,
+        nombre: response.estudiante_nombre,
+        total_inscripciones: response.total_inscripciones
+      });
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar inscripciones del estudiante');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (session && estudianteId) {
+      fetchInscripciones();
+    }
+  }, [session, estudianteId]);
+
+  return {
+    inscripciones,
+    estudiante,
     loading,
     error,
     refetch: fetchInscripciones

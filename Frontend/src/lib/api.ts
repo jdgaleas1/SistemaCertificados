@@ -322,6 +322,32 @@ export async function importarEstudiantesXLSX(file: File) {
   }
 }
 
+// Obtener inscripciones de un estudiante específico
+export async function getInscripcionesEstudiante(estudianteId: string) {
+  const session = await getSession();
+  const url = `${CURSOS_SERVICE_URL}/estudiantes/${estudianteId}/inscripciones`;
+  
+  const headers: Record<string, string> = {};
+  if (session?.accessToken) {
+    headers.Authorization = `Bearer ${session.accessToken}`;
+  }
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers,
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new ApiError(
+      response.status,
+      errorData.detail || `HTTP ${response.status}: ${response.statusText}`
+    );
+  }
+  
+  return response.json();
+}
+
 // Funciones adicionales para gestión de inscripciones
 export async function getInscripciones(filters?: {
   skip?: number;

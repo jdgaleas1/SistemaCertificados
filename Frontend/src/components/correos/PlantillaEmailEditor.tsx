@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import DashboardLayout from "@/components/layout/DashboardLayout";
 import { PlantillaEmail } from '@/hooks/useEmail';
 
 interface PlantillaEmailEditorProps {
@@ -94,6 +95,7 @@ export default function PlantillaEmailEditor({
   ];
 
   return (
+    <DashboardLayout>
     <div className="max-w-6xl mx-auto p-6">
       <div className="bg-white rounded-lg shadow-lg">
         <div className="p-6 border-b">
@@ -267,5 +269,6 @@ export default function PlantillaEmailEditor({
         </form>
       </div>
     </div>
+    </DashboardLayout>
   );
 }

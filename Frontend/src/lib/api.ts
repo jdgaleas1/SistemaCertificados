@@ -209,6 +209,8 @@ export async function getCursos(filters?: {
   instructor_id?: string;
   activos?: boolean;
 }) {
+  console.log('🔍 Obteniendo cursos con filtros:', filters);
+  
   const params = new URLSearchParams();
   if (filters?.skip !== undefined) params.append('skip', filters.skip.toString());
   if (filters?.limit !== undefined) params.append('limit', filters.limit.toString());
@@ -217,7 +219,19 @@ export async function getCursos(filters?: {
   if (filters?.activos !== undefined) params.append('activos', filters.activos.toString());
   
   const queryString = params.toString();
-  return cursosApi.get(`/cursos${queryString ? `?${queryString}` : ''}`);
+  const endpoint = `/cursos${queryString ? `?${queryString}` : ''}`;
+  
+  console.log('📡 Endpoint de cursos:', endpoint);
+  console.log('🌐 URL completa:', `${CURSOS_SERVICE_URL}${endpoint}`);
+  
+  try {
+    const result = await cursosApi.get(endpoint);
+    console.log('✅ Cursos obtenidos exitosamente:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ Error al obtener cursos:', error);
+    throw error;
+  }
 }
 
 export async function getCurso(cursoId: string) {

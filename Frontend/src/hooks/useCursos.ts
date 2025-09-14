@@ -34,18 +34,24 @@ export function useCursos(filters?: CursosFilters) {
 
   const fetchCursos = async (newFilters?: CursosFilters) => {
     try {
+      console.log('🔄 Iniciando carga de cursos...');
       setLoading(true);
       setError(null);
       
       const response: PaginatedCursosResponse = await getCursos(newFilters || filters);
-      setCursos(response.data);
+      console.log('📊 Respuesta de cursos:', response);
+      
+      setCursos(response.data || []);
       setPagination({
-        total: response.total,
-        page: response.page,
-        per_page: response.per_page,
-        pages: response.pages
+        total: response.total || 0,
+        page: response.page || 1,
+        per_page: response.per_page || 25,
+        pages: response.pages || 0
       });
+      
+      console.log('✅ Cursos cargados exitosamente:', response.data?.length || 0, 'cursos');
     } catch (err: any) {
+      console.error('❌ Error al cargar cursos:', err);
       setError(err.message || 'Error al cargar cursos');
     } finally {
       setLoading(false);

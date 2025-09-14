@@ -88,6 +88,7 @@ export default function CursosList() {
       ? cursos.filter((c) => c.instructor_id === session.user.id).length 
       : 0;
 
+    console.log('📊 Estadísticas de cursos:', { total, conFechas, misCursos, cursos });
     return { total, conFechas, misCursos };
   };
 

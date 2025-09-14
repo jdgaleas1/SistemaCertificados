@@ -3,6 +3,7 @@ from typing import List
 import pandas as pd
 import io
 import math
+import re
 from fastapi import APIRouter, HTTPException, Depends, status, UploadFile, File
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
@@ -306,7 +307,7 @@ async def import_xlsx_estructura_cdp(
         expected_columns = [
             'Nombres Estudiante',
             'Apellidos Estudiante', 
-            'Numero de cedula estudiante',
+            'Número de cédula estudiante',
             'Correo estudiante',
             'Curso',
             'Estudiante Activo/Inactivo',
@@ -341,41 +342,45 @@ async def import_xlsx_estructura_cdp(
                 # Limpiar datos de la fila
                 nombres = str(row['Nombres Estudiante']).strip()
                 apellidos = str(row['Apellidos Estudiante']).strip()
-                cedula = str(row['Numero de cedula estudiante']).strip()
+                cedula = str(row['Número de cédula estudiante']).strip()
                 email = str(row['Correo estudiante']).strip().lower()
                 curso_nombre = str(row['Curso']).strip()
                 estado_texto = str(row['Estudiante Activo/Inactivo']).strip()
                 instructor_email = str(row['Instructor a cargo del curso']).strip().lower()
                 
                 # Validar datos obligatorios
-                if not all([nombres, apellidos, cedula, email, curso_nombre, instructor_email]):
+                if not all([nombres, apellidos, cedula, email, curso_nombre]):
                     errores.append(f"Fila {index + 2}: Datos incompletos")
+                    continue
+                
+                # Validar formato de email
+                email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+                if not re.match(email_pattern, email):
+                    errores.append(f"Fila {index + 2}: Email inválido: {email}")
+                    continue
+                
+                # Validar cédula (solo números, mínimo 5 dígitos)
+                if not cedula.isdigit() or len(cedula) < 5:
+                    errores.append(f"Fila {index + 2}: Cédula inválida: {cedula}")
                     continue
                 
                 # Convertir estado Activo/Inactivo
                 is_active = estado_texto.lower() == 'activo'
                 
-                # 1. PROCESAR INSTRUCTOR
-                if instructor_email not in instructores_cache:
-                    # Buscar instructor por email
+                # 1. PROCESAR INSTRUCTOR (siempre usar instructor por defecto)
+                if "instructorDefaul@gmail.com" not in instructores_cache:
+                    # Buscar el instructor por defecto
                     instructor = db.query(Usuario).filter(
-                        Usuario.email == instructor_email,
-                        Usuario.rol == RolUsuario.PROFESOR
+                        Usuario.email == "instructorDefaul@gmail.com"
                     ).first()
                     
                     if not instructor:
-                        # Si no existe, buscar el instructor por defecto
-                        instructor = db.query(Usuario).filter(
-                            Usuario.email == "instructorDefaul@gmail.com"
-                        ).first()
-                        
-                        if not instructor:
-                            errores.append(f"Fila {index + 2}: No se encontró instructor por defecto")
-                            continue
+                        errores.append(f"Fila {index + 2}: No se encontró instructor por defecto")
+                        continue
                     
-                    instructores_cache[instructor_email] = instructor.id
+                    instructores_cache["instructorDefaul@gmail.com"] = instructor.id
                 
-                instructor_id = instructores_cache[instructor_email]
+                instructor_id = instructores_cache["instructorDefaul@gmail.com"]
                 
                 # 2. PROCESAR CURSO
                 curso_key = f"{curso_nombre}_{instructor_id}"
@@ -400,45 +405,34 @@ async def import_xlsx_estructura_cdp(
                 
                 curso_id = cursos_cache[curso_key]
                 
-                # 3. PROCESAR ESTUDIANTE (manejar cédulas duplicadas)
-                if cedula in estudiantes_procesados:
-                    # Cédula duplicada: Excel prevalece, actualizar datos
-                    estudiante = db.query(Usuario).filter(Usuario.id == estudiantes_procesados[cedula]).first()
-                    if estudiante:
-                        estudiante.email = email
-                        estudiante.nombre = nombres
-                        estudiante.apellido = apellidos
-                        db.flush()
-                else:
-                    # Buscar estudiante existente por email o cédula
-                    estudiante = db.query(Usuario).filter(
-                        or_(Usuario.email == email, Usuario.cedula == cedula)
-                    ).first()
-                    
-                    if not estudiante:
-                        # Crear nuevo estudiante
-                        estudiante = Usuario(
-                            email=email,
-                            nombre=nombres,
-                            apellido=apellidos,
-                            cedula=cedula,
-                            rol=RolUsuario.ESTUDIANTE,
-                            password_hash=get_password_hash("123456")  # Password temporal
-                        )
-                        db.add(estudiante)
-                        db.flush()
-                        usuarios_creados += 1
-                    else:
-                        # Actualizar datos del estudiante existente (Excel prevalece)
-                        estudiante.email = email
-                        estudiante.nombre = nombres
-                        estudiante.apellido = apellidos
-                        estudiante.cedula = cedula
-                        db.flush()
-                    
-                    estudiantes_procesados[cedula] = estudiante.id
+                # 3. PROCESAR ESTUDIANTE (manejar duplicados por cédula o email)
+                # Buscar estudiante existente por cédula o email
+                estudiante = db.query(Usuario).filter(
+                    or_(Usuario.cedula == cedula, Usuario.email == email)
+                ).first()
                 
-                estudiante_id = estudiantes_procesados[cedula]
+                if not estudiante:
+                    # Crear nuevo estudiante
+                    estudiante = Usuario(
+                        email=email,
+                        nombre=nombres,
+                        apellido=apellidos,
+                        cedula=cedula,
+                        rol=RolUsuario.ESTUDIANTE,
+                        password_hash=get_password_hash("123456")  # Password temporal
+                    )
+                    db.add(estudiante)
+                    db.flush()
+                    usuarios_creados += 1
+                else:
+                    # Actualizar datos del estudiante existente (Excel prevalece)
+                    estudiante.email = email
+                    estudiante.nombre = nombres
+                    estudiante.apellido = apellidos
+                    estudiante.cedula = cedula
+                    db.flush()
+                
+                estudiante_id = estudiante.id
                 
                 # 4. CREAR/ACTUALIZAR INSCRIPCIÓN
                 inscripcion_existente = db.query(Inscripcion).filter(

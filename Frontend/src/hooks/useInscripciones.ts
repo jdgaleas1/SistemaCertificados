@@ -67,7 +67,7 @@ export function useInscripciones(filters?: InscripcionesFilters) {
     await fetchInscripciones(); // Refrescar lista
   };
 
-  const importarCSVMutation = async (_cursoId: string, file: File): Promise<CSVImportResponse> => {
+  const importarXLSXMutation = async (file: File): Promise<CSVImportResponse> => {
     const result = await importarEstudiantesXLSX(file);
     await fetchInscripciones(); // Refrescar lista
     return result;
@@ -82,7 +82,7 @@ export function useInscripciones(filters?: InscripcionesFilters) {
     inscribirEstudiante: inscribirEstudianteMutation,
     marcarCompletada: marcarCompletadaMutation,
     desactivarInscripcion: desactivarInscripcionMutation,
-    importarCSV: importarCSVMutation
+    importarXLSX: importarXLSXMutation
   };
 }
 

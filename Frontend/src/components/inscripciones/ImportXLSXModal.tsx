@@ -16,35 +16,16 @@ interface ImportCSVModalProps {
 export default function ImportCSVModal({ open, onClose, onImport }: ImportCSVModalProps) {
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
-  const [cursos, setCursos] = useState<Curso[]>([]);
-  const [selectedCurso, setSelectedCurso] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importResult, setImportResult] = useState<CSVImportResponse | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
-      fetchCursos();
-      setSelectedCurso("");
       setSelectedFile(null);
       setImportResult(null);
     }
   }, [open]);
-
-  const fetchCursos = async () => {
-    try {
-      const response = await getCursos({ activos: true });
-      let cursosData = response.data || response;
-      
-      // Si es profesor, filtrar solo sus cursos
-      if (session?.user?.role === "PROFESOR") {
-        cursosData = cursosData.filter((curso: Curso) => curso.instructor_id === session.user.id);
-      }
-      setCursos(cursosData);
-    } catch (error) {
-      console.error("Error al cargar cursos:", error);
-    }
-  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -62,7 +43,17 @@ const handleImport = async () => {
     alert("Debe seleccionar un archivo Excel (.xlsx)");
     return;
   }
-  const result = await onImport(selectedFile);  
+  
+  setLoading(true);
+  try {
+    const result = await onImport(selectedFile);
+    setImportResult(result);
+  } catch (error) {
+    console.error("Error al importar:", error);
+    alert("Error al importar el archivo. Verifique el formato.");
+  } finally {
+    setLoading(false);
+  }
 }
 
   const downloadTemplate = () => {
@@ -73,7 +64,6 @@ const handleImport = async () => {
   };
 
   const handleClose = () => {
-    setSelectedCurso("");
     setSelectedFile(null);
     setImportResult(null);
     if (fileInputRef.current) {
@@ -145,7 +135,10 @@ const handleImport = async () => {
                   <strong>Formato del archivo Excel (.xlsx):</strong>
                 </Text>
                 <Text size="2" className="text-blue-600 block mb-2">
-                  La plantilla contiene las columnas: email, nombres completos apellido, cedula
+                  El archivo debe contener las columnas: Nombres Estudiante, Apellidos Estudiante, Número de cédula estudiante, Correo estudiante, Curso, Estudiante Activo/Inactivo, Instructor a cargo del curso
+                </Text>
+                <Text size="2" className="text-blue-600 block mb-2">
+                  <strong>Nota:</strong> El instructor siempre será asignado por defecto. Los cursos se crearán automáticamente si no existen.
                 </Text>
                 <Button
                   size="1"
@@ -225,7 +218,7 @@ const handleImport = async () => {
             {!importResult && (
               <Button
                 onClick={handleImport}
-                disabled={loading || !selectedCurso || !selectedFile}
+                disabled={loading || !selectedFile}
               >
                 {loading ? (
                   <Loader2 size={16} className="animate-spin" />

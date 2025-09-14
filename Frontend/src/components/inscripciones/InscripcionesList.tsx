@@ -36,7 +36,7 @@ export default function InscripcionesList() {
     marcarCompletada,
     desactivarInscripcion,
     inscribirEstudiante,
-    importarCSV,
+    importarXLSX,
   } = useInscripciones(
     useMemo(() => ({
       limit: 25,
@@ -67,8 +67,8 @@ export default function InscripcionesList() {
     setInscripcionModalOpen(false);
   };
 
-  const handleImportCSV = async (_cursoId: string, file: File) => {
-    const result = await importarCSV("_", file);
+  const handleImportXLSX = async (file: File) => {
+    const result = await importarXLSX(file);
     return result;
   };
 
@@ -347,7 +347,7 @@ export default function InscripcionesList() {
       <ImportCSVModal
         open={importCSVModalOpen}
         onClose={() => setImportCSVModalOpen(false)}
-        onImport={handleImportCSV}
+        onImport={handleImportXLSX}
       />
     </div>
   );

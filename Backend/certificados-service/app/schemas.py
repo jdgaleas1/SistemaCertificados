@@ -89,6 +89,45 @@ class LogEmailResponse(BaseModel):
     class Config:
         from_attributes = True
 
+# ==================== ENVÍO DE CORREOS ====================
+
+class EnvioEmailIndividual(BaseModel):
+    destinatario_email: EmailStr
+    destinatario_nombre: Optional[str] = None
+    asunto: str = Field(..., min_length=5, max_length=255)
+    contenido_html: str = Field(..., min_length=50)
+    plantilla_certificado_id: Optional[UUID] = None
+    variables: Optional[Dict[str, str]] = None
+
+class EnvioMasivoRequest(BaseModel):
+    plantilla_email_id: UUID
+    plantilla_certificado_id: Optional[UUID] = None
+    curso_id: Optional[UUID] = None
+    destinatarios_ids: Optional[List[UUID]] = None
+    variables_globales: Optional[Dict[str, str]] = None
+    configuracion_lotes: Optional[Dict[str, int]] = None
+
+class EnvioMasivoResponse(BaseModel):
+    total_destinatarios: int
+    enviados_exitosos: int
+    errores: int
+    log_ids: List[UUID]
+    errores_detalle: List[str]
+    tiempo_total: Optional[float] = None
+
+class ConfiguracionLotes(BaseModel):
+    lote_size: int = Field(default=10, ge=1, le=50)
+    pausa_lotes: int = Field(default=20, ge=0, le=300)
+    pausa_individual: float = Field(default=1.0, ge=0.0, le=10.0)
+
+class EstadisticasEmail(BaseModel):
+    total_enviados: int
+    total_entregados: int
+    total_errores: int
+    total_pendientes: int
+    emails_hoy: int
+    tasa_exito: float
+
 # ==================== UTILIDADES ====================
 
 def extraer_variables_plantilla(contenido_html: str) -> List[str]:

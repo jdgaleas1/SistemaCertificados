@@ -21,7 +21,9 @@ from app.schemas import EnvioEmailIndividual, LogEmailResponse
 # Configuración SMTP2GO
 SMTP2GO_API_KEY = os.getenv("SMTP2GO_API_KEY")
 SMTP2GO_API_URL = "https://api.smtp2go.com/v3/email/send"
-SENDER_EMAIL = "Centro de Desarrollo Profesional CDP <documentos@capacitacionescdp.com>"
+SENDER_EMAIL = os.getenv("SMTP2GO_SENDER_EMAIL", "Centro de Desarrollo Profesional CDP <documentos@capacitacionescdp.com>")
+LOTE_SIZE = int(os.getenv("SMTP2GO_LOTE_SIZE", "10"))
+PAUSA_LOTES = int(os.getenv("SMTP2GO_PAUSA_LOTES", "20"))
 
 class EmailService:
     def __init__(self, db: Session):
@@ -277,12 +279,26 @@ class EmailService:
         
         return LogEmailResponse.from_orm(log_email)
     
-    def enviar_email_masivo(self, plantilla_email_id: str, destinatarios_ids: List[str], 
-                           plantilla_certificado_id: Optional[str] = None,
-                           variables_globales: Optional[Dict] = None) -> Dict:
+    def enviar_email_masivo_lotes(self, plantilla_email_id: str, destinatarios_ids: List[str], 
+                                 plantilla_certificado_id: Optional[str] = None,
+                                 variables_globales: Optional[Dict] = None,
+                                 configuracion_lotes: Optional[Dict] = None) -> Dict:
         """
-        Envía emails masivos usando una plantilla
+        Envía emails masivos por lotes con configuración de pausas
         """
+        import time
+        from datetime import datetime
+        
+        # Configuración de lotes
+        lote_size = LOTE_SIZE
+        pausa_lotes = PAUSA_LOTES
+        pausa_individual = 1.0
+        
+        if configuracion_lotes:
+            lote_size = configuracion_lotes.get("lote_size", lote_size)
+            pausa_lotes = configuracion_lotes.get("pausa_lotes", pausa_lotes)
+            pausa_individual = configuracion_lotes.get("pausa_individual", pausa_individual)
+        
         # Obtener plantilla de email
         plantilla_email = self.db.query(PlantillaEmail).filter(
             PlantillaEmail.id == plantilla_email_id,
@@ -306,57 +322,87 @@ class EmailService:
             "enviados_exitosos": 0,
             "errores": 0,
             "log_ids": [],
-            "errores_detalle": []
+            "errores_detalle": [],
+            "tiempo_total": 0
         }
         
-        # Procesar cada usuario
-        for usuario in usuarios:
-            try:
-                # Preparar variables personalizadas
-                variables = {
-                    "NOMBRE": usuario.nombre,
-                    "APELLIDO": usuario.apellido,
-                    "NOMBRE_COMPLETO": usuario.nombre_completo,
-                    "EMAIL": usuario.email,
-                    "CEDULA": usuario.cedula
-                }
-                
-                # Agregar variables globales
-                if variables_globales:
-                    variables.update(variables_globales)
-                
-                # Procesar asunto y contenido
-                asunto_procesado = self.procesar_variables(plantilla_email.asunto, variables)
-                contenido_procesado = self.procesar_variables(plantilla_email.contenido_html, variables)
-                
-                # Crear datos de envío
-                envio_data = EnvioEmailIndividual(
-                    destinatario_email=usuario.email,
-                    destinatario_nombre=usuario.nombre_completo,
-                    asunto=asunto_procesado,
-                    contenido_html=contenido_procesado,
-                    plantilla_certificado_id=plantilla_certificado_id,
-                    variables=variables
-                )
-                
-                # Enviar email
-                log_result = self.enviar_email_individual(envio_data)
-                resultados["log_ids"].append(log_result.id)
-                
-                if log_result.estado == EstadoEmail.ENVIADO:
-                    resultados["enviados_exitosos"] += 1
-                else:
-                    resultados["errores"] += 1
-                    resultados["errores_detalle"].append(
-                        f"{usuario.email}: {log_result.mensaje_error}"
+        # Dividir en lotes
+        lotes = [usuarios[i:i + lote_size] for i in range(0, len(usuarios), lote_size)]
+        tiempo_inicio = time.time()
+        
+        print(f"🚀 Iniciando envío masivo: {len(usuarios)} destinatarios en {len(lotes)} lotes")
+        
+        # Procesar cada lote
+        for num_lote, lote in enumerate(lotes, 1):
+            print(f"📦 Procesando lote {num_lote}/{len(lotes)} ({len(lote)} correos)")
+            
+            for num_correo, usuario in enumerate(lote, 1):
+                try:
+                    print(f"  📧 {num_correo}/{len(lote)}: {usuario.email}")
+                    
+                    # Preparar variables personalizadas
+                    variables = {
+                        "NOMBRE": usuario.nombre,
+                        "APELLIDO": usuario.apellido,
+                        "NOMBRE_COMPLETO": usuario.nombre_completo,
+                        "EMAIL": usuario.email,
+                        "CEDULA": usuario.cedula
+                    }
+                    
+                    # Agregar variables globales
+                    if variables_globales:
+                        variables.update(variables_globales)
+                    
+                    # Procesar asunto y contenido
+                    asunto_procesado = self.procesar_variables(plantilla_email.asunto, variables)
+                    contenido_procesado = self.procesar_variables(plantilla_email.contenido_html, variables)
+                    
+                    # Crear datos de envío
+                    envio_data = EnvioEmailIndividual(
+                        destinatario_email=usuario.email,
+                        destinatario_nombre=usuario.nombre_completo,
+                        asunto=asunto_procesado,
+                        contenido_html=contenido_procesado,
+                        plantilla_certificado_id=plantilla_certificado_id,
+                        variables=variables
                     )
-                
-                # Pausa pequeña entre envíos para no saturar
-                time.sleep(0.5)
-                
-            except Exception as e:
-                resultados["errores"] += 1
-                resultados["errores_detalle"].append(f"{usuario.email}: {str(e)}")
+                    
+                    # Enviar email
+                    log_result = self.enviar_email_individual(envio_data)
+                    resultados["log_ids"].append(log_result.id)
+                    
+                    if log_result.estado == EstadoEmail.ENVIADO:
+                        resultados["enviados_exitosos"] += 1
+                        print(f"     ✅ ENVIADO")
+                    else:
+                        resultados["errores"] += 1
+                        error_msg = f"{usuario.email}: {log_result.mensaje_error}"
+                        resultados["errores_detalle"].append(error_msg)
+                        print(f"     ❌ FALLÓ: {log_result.mensaje_error}")
+                    
+                    # Pausa entre correos individuales
+                    if pausa_individual > 0:
+                        time.sleep(pausa_individual)
+                    
+                except Exception as e:
+                    resultados["errores"] += 1
+                    error_msg = f"{usuario.email}: {str(e)}"
+                    resultados["errores_detalle"].append(error_msg)
+                    print(f"     ❌ ERROR: {str(e)}")
+            
+            # Pausa entre lotes (excepto el último)
+            if num_lote < len(lotes) and pausa_lotes > 0:
+                print(f"⏳ Pausa entre lotes: {pausa_lotes}s...")
+                time.sleep(pausa_lotes)
+        
+        # Calcular tiempo total
+        tiempo_total = time.time() - tiempo_inicio
+        resultados["tiempo_total"] = round(tiempo_total, 2)
+        
+        print(f"\n🏁 ENVÍO COMPLETADO")
+        print(f"✅ Exitosos: {resultados['enviados_exitosos']}")
+        print(f"❌ Fallidos: {resultados['errores']}")
+        print(f"⏱️ Tiempo: {tiempo_total:.1f}s")
         
         return resultados
     

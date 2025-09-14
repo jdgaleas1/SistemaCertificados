@@ -12,9 +12,12 @@ from app.models import Plantilla, PlantillaEmail
 from app.schemas import (
     PlantillaCreate, PlantillaUpdate, PlantillaResponse,
     PlantillaEmailCreate, PlantillaEmailUpdate, PlantillaEmailResponse,
+    EnvioEmailIndividual, EnvioMasivoRequest, EnvioMasivoResponse,
+    EstadisticasEmail, LogEmailResponse,
     extraer_variables_plantilla
 )
 from app.dependencies import require_auth
+from app.email_service import EmailService
 
 router = APIRouter()
 
@@ -339,3 +342,95 @@ def delete_plantilla_email(
     db.commit()
     
     return {"message": "Plantilla de email eliminada correctamente"}
+
+# ===================== ENVÍO DE CORREOS =====================
+
+@router.post("/enviar-individual", response_model=LogEmailResponse)
+def enviar_email_individual(
+    envio_data: EnvioEmailIndividual,
+    db: Session = Depends(get_db),
+    user_info: dict = Depends(require_auth)
+):
+    """Enviar email individual"""
+    
+    email_service = EmailService(db)
+    try:
+        resultado = email_service.enviar_email_individual(envio_data)
+        return resultado
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error enviando email: {str(e)}")
+
+@router.post("/enviar-masivo", response_model=EnvioMasivoResponse)
+def enviar_email_masivo(
+    envio_data: EnvioMasivoRequest,
+    db: Session = Depends(get_db),
+    user_info: dict = Depends(require_auth)
+):
+    """Enviar emails masivos por lotes"""
+    
+    email_service = EmailService(db)
+    
+    try:
+        # Validar que se proporcione curso_id o destinatarios_ids
+        if not envio_data.curso_id and not envio_data.destinatarios_ids:
+            raise HTTPException(status_code=400, detail="Debe proporcionar curso_id o destinatarios_ids")
+        
+        # Si se proporciona curso_id, obtener destinatarios del curso
+        destinatarios_ids = envio_data.destinatarios_ids
+        if envio_data.curso_id:
+            # Aquí necesitarías hacer una consulta a la base de datos para obtener
+            # los estudiantes inscritos en el curso. Por ahora usamos los IDs proporcionados
+            if not destinatarios_ids:
+                raise HTTPException(status_code=400, detail="Para envío por curso, debe proporcionar destinatarios_ids")
+        
+        resultado = email_service.enviar_email_masivo_lotes(
+            plantilla_email_id=str(envio_data.plantilla_email_id),
+            destinatarios_ids=[str(id) for id in destinatarios_ids],
+            plantilla_certificado_id=str(envio_data.plantilla_certificado_id) if envio_data.plantilla_certificado_id else None,
+            variables_globales=envio_data.variables_globales,
+            configuracion_lotes=envio_data.configuracion_lotes
+        )
+        
+        return EnvioMasivoResponse(**resultado)
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error enviando emails masivos: {str(e)}")
+
+@router.get("/estadisticas-email", response_model=EstadisticasEmail)
+def obtener_estadisticas_email(
+    db: Session = Depends(get_db),
+    user_info: dict = Depends(require_auth)
+):
+    """Obtener estadísticas de envíos de email"""
+    
+    email_service = EmailService(db)
+    try:
+        estadisticas = email_service.obtener_estadisticas_email()
+        return EstadisticasEmail(**estadisticas)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error obteniendo estadísticas: {str(e)}")
+
+@router.get("/logs-email", response_model=List[LogEmailResponse])
+def obtener_logs_email(
+    skip: int = 0,
+    limit: int = 100,
+    estado: str = None,
+    db: Session = Depends(get_db),
+    user_info: dict = Depends(require_auth)
+):
+    """Obtener logs de envíos de email"""
+    
+    from app.models import LogEmail, EstadoEmail
+    
+    query = db.query(LogEmail)
+    
+    if estado:
+        try:
+            estado_enum = EstadoEmail(estado)
+            query = query.filter(LogEmail.estado == estado_enum)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Estado inválido")
+    
+    logs = query.order_by(LogEmail.fecha_envio.desc()).offset(skip).limit(limit).all()
+    
+    return [LogEmailResponse.from_orm(log) for log in logs]

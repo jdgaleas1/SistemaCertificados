@@ -1,293 +1,157 @@
-"use client";
+'use client';
 
-import { useMemo } from "react";
-import { Heading, Text, Card, Button, Flex, Badge } from "@radix-ui/themes";
-import { Mail, Plus, Send, Eye, Edit, Trash2 } from "lucide-react";
-import { ColumnDef } from "@tanstack/react-table";
-import DashboardLayout from "@/components/layout/DashboardLayout";
-import { DataTable } from "@/components/ui/DataTable";
-
-interface CorreoEnviado {
-  id: number;
-  destinatario: string;
-  asunto: string;
-  plantilla: string;
-  fechaEnvio: string;
-  estado: string;
-}
+import Link from 'next/link';
+import { Mail, Users, Send, Settings } from 'lucide-react';
 
 export default function CorreosPage() {
-  const plantillasCorreo = [
+  const opciones = [
     {
-      id: 1,
-      nombre: "Bienvenida",
-      asunto: "¡Bienvenido al Sistema CDP!",
-      descripcion: "Email de bienvenida para nuevos usuarios",
-      fechaCreacion: "2024-01-10",
-      estado: "Activa",
-      usos: 156
+      titulo: 'Plantillas de Email',
+      descripcion: 'Gestiona las plantillas HTML para el envío de correos masivos',
+      icono: Settings,
+      href: '/dashboard/correos/plantillas',
+      color: 'blue'
     },
     {
-      id: 2,
-      nombre: "Certificado Listo",
-      asunto: "Tu certificado está listo para descargar",
-      descripcion: "Notificación cuando un certificado está disponible",
-      fechaCreacion: "2024-01-15",
-      estado: "Activa",
-      usos: 89
+      titulo: 'Envío Masivo',
+      descripcion: 'Envía correos masivos a todos los estudiantes de un curso',
+      icono: Users,
+      href: '/dashboard/correos/masivo',
+      color: 'green'
     },
     {
-      id: 3,
-      nombre: "Recordatorio Curso",
-      asunto: "No olvides continuar tu curso",
-      descripcion: "Recordatorio para estudiantes inactivos",
-      fechaCreacion: "2024-02-01",
-      estado: "Borrador",
-      usos: 0
+      titulo: 'Envío Individual',
+      descripcion: 'Envía un correo personalizado a un estudiante específico',
+      icono: Send,
+      href: '/dashboard/correos/individual',
+      color: 'purple'
     }
   ];
 
-  const correosEnviados: CorreoEnviado[] = [
-    {
-      id: 1,
-      destinatario: "maria@email.com",
-      asunto: "¡Bienvenido al Sistema CDP!",
-      plantilla: "Bienvenida",
-      fechaEnvio: "2024-02-15 10:30",
-      estado: "Entregado"
-    },
-    {
-      id: 2,
-      destinatario: "juan@email.com",
-      asunto: "Tu certificado está listo para descargar",
-      plantilla: "Certificado Listo",
-      fechaEnvio: "2024-02-15 09:15",
-      estado: "Entregado"
-    },
-    {
-      id: 3,
-      destinatario: "ana@email.com",
-      asunto: "No olvides continuar tu curso",
-      plantilla: "Recordatorio Curso",
-      fechaEnvio: "2024-02-15 08:00",
-      estado: "Pendiente"
-    },
-    {
-      id: 4,
-      destinatario: "carlos@email.com",
-      asunto: "¡Bienvenido al Sistema CDP!",
-      plantilla: "Bienvenida",
-      fechaEnvio: "2024-02-14 16:45",
-      estado: "Error"
-    }
-  ];
-
-  const getEstadoBadgeColor = (estado: string) => {
-    switch (estado) {
-      case "Activa": return "green";
-      case "Borrador": return "yellow";
-      case "Entregado": return "green";
-      case "Pendiente": return "blue";
-      case "Error": return "red";
-      default: return "gray";
+  const getColorClasses = (color: string) => {
+    switch (color) {
+      case 'blue':
+        return {
+          bg: 'bg-blue-50',
+          icon: 'bg-blue-100 text-blue-600',
+          hover: 'hover:bg-blue-100',
+          border: 'border-blue-200'
+        };
+      case 'green':
+        return {
+          bg: 'bg-green-50',
+          icon: 'bg-green-100 text-green-600',
+          hover: 'hover:bg-green-100',
+          border: 'border-green-200'
+        };
+      case 'purple':
+        return {
+          bg: 'bg-purple-50',
+          icon: 'bg-purple-100 text-purple-600',
+          hover: 'hover:bg-purple-100',
+          border: 'border-purple-200'
+        };
+      default:
+        return {
+          bg: 'bg-gray-50',
+          icon: 'bg-gray-100 text-gray-600',
+          hover: 'hover:bg-gray-100',
+          border: 'border-gray-200'
+        };
     }
   };
 
-  const correosColumns: ColumnDef<CorreoEnviado>[] = useMemo(
-    () => [
-      {
-        accessorKey: "destinatario",
-        header: "Destinatario",
-        cell: ({ getValue }) => <Text weight="medium">{getValue() as string}</Text>,
-      },
-      {
-        accessorKey: "asunto",
-        header: "Asunto",
-        cell: ({ getValue }) => <Text>{getValue() as string}</Text>,
-      },
-      {
-        accessorKey: "plantilla",
-        header: "Plantilla",
-        cell: ({ getValue }) => (
-          <Text size="2" className="text-gray-600">{getValue() as string}</Text>
-        ),
-      },
-      {
-        accessorKey: "fechaEnvio",
-        header: "Fecha Envío",
-        cell: ({ getValue }) => (
-          <Text size="2">
-            {new Date(getValue() as string).toLocaleString()}
-          </Text>
-        ),
-      },
-      {
-        accessorKey: "estado",
-        header: "Estado",
-        cell: ({ getValue }) => (
-          <Badge color={getEstadoBadgeColor(getValue() as string)} size="1">
-            {getValue() as string}
-          </Badge>
-        ),
-      },
-      {
-        id: "actions",
-        header: "Acciones",
-        cell: ({ row }) => (
-          <div className="flex gap-1">
-            <Button size="1" variant="soft" className="cursor-pointer">
-              <Eye size={12} />
-            </Button>
-            {row.original.estado === "Error" && (
-              <Button size="1" variant="soft" color="orange" className="cursor-pointer">
-                <Send size={12} />
-              </Button>
-            )}
-          </div>
-        ),
-      },
-    ],
-    []
-  );
-
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <Flex justify="between" align="center">
+    <div className="max-w-7xl mx-auto p-6">
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="bg-blue-100 p-3 rounded-xl">
+            <Mail className="h-8 w-8 text-blue-600" />
+          </div>
           <div>
-            <Heading size="7" className="text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold text-gray-900">
               Gestión de Correos
-            </Heading>
-            <Text size="3" className="text-gray-600">
-              Administra plantillas y envíos de correo electrónico
-            </Text>
+            </h1>
+            <p className="text-gray-600">
+              Administra el envío de correos masivos e individuales
+            </p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" className="cursor-pointer">
-              <Send size={16} />
-              Envío Masivo
-            </Button>
-            <Button className="cursor-pointer">
-              <Plus size={16} />
-              Nueva Plantilla
-            </Button>
-          </div>
-        </Flex>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="bg-blue-100 p-2 rounded-lg">
-                <Mail size={20} className="text-blue-600" />
-              </div>
-              <div>
-                <Text size="3" weight="bold">1,234</Text>
-                <Text size="2" className="text-gray-600 block">Total Enviados</Text>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="bg-green-100 p-2 rounded-lg">
-                <Mail size={20} className="text-green-600" />
-              </div>
-              <div>
-                <Text size="3" weight="bold">1,189</Text>
-                <Text size="2" className="text-gray-600 block">Entregados</Text>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="bg-yellow-100 p-2 rounded-lg">
-                <Mail size={20} className="text-yellow-600" />
-              </div>
-              <div>
-                <Text size="3" weight="bold">23</Text>
-                <Text size="2" className="text-gray-600 block">Pendientes</Text>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="bg-red-100 p-2 rounded-lg">
-                <Mail size={20} className="text-red-600" />
-              </div>
-              <div>
-                <Text size="3" weight="bold">22</Text>
-                <Text size="2" className="text-gray-600 block">Errores</Text>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Plantillas de Correo */}
-        <div>
-          <Heading size="5" className="mb-4">
-            Plantillas de Correo
-          </Heading>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {plantillasCorreo.map((plantilla) => (
-              <Card key={plantilla.id} className="p-6">
-                <div className="space-y-4">
-                  <div className="flex items-start justify-between">
-                    <div className="bg-blue-100 p-2 rounded-lg">
-                      <Mail size={20} className="text-blue-600" />
-                    </div>
-                    <Badge color={getEstadoBadgeColor(plantilla.estado)} size="1">
-                      {plantilla.estado}
-                    </Badge>
-                  </div>
-                  
-                  <div>
-                    <Heading size="4" className="mb-2">
-                      {plantilla.nombre}
-                    </Heading>
-                    <Text size="3" weight="medium" className="text-gray-700 mb-1">
-                      {plantilla.asunto}
-                    </Text>
-                    <Text size="2" className="text-gray-600">
-                      {plantilla.descripcion}
-                    </Text>
-                  </div>
-
-                  <div className="text-sm text-gray-500">
-                    <div>Creada: {new Date(plantilla.fechaCreacion).toLocaleDateString()}</div>
-                    <div>Usos: {plantilla.usos} envíos</div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button size="2" variant="soft" className="flex-1 cursor-pointer">
-                      <Eye size={14} />
-                      Vista Previa
-                    </Button>
-                    <Button size="2" variant="outline" className="cursor-pointer">
-                      <Edit size={14} />
-                    </Button>
-                    <Button size="2" variant="outline" color="red" className="cursor-pointer">
-                      <Trash2 size={14} />
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* Correos Enviados Recientes */}
-        <div>
-          <Heading size="5" className="mb-4">
-            Correos Enviados Recientes
-          </Heading>
-          <DataTable
-            columns={correosColumns}
-            data={correosEnviados}
-            searchPlaceholder="Buscar por destinatario, asunto o plantilla..."
-            persistStateKey="correos-list"
-          />
         </div>
       </div>
-    </DashboardLayout>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {opciones.map((opcion) => {
+          const Icono = opcion.icono;
+          const colors = getColorClasses(opcion.color);
+          
+          return (
+            <Link
+              key={opcion.href}
+              href={opcion.href}
+              className={`group block p-6 rounded-xl border-2 ${colors.bg} ${colors.border} ${colors.hover} transition-all duration-200 hover:shadow-lg hover:scale-105`}
+            >
+              <div className="flex items-start space-x-4">
+                <div className={`p-3 rounded-lg ${colors.icon} group-hover:scale-110 transition-transform duration-200`}>
+                  <Icono className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    {opcion.titulo}
+                  </h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    {opcion.descripcion}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="mt-4 flex items-center text-sm font-medium text-gray-500 group-hover:text-gray-700">
+                <span>Acceder</span>
+                <svg 
+                  className="ml-2 h-4 w-4 transform group-hover:translate-x-1 transition-transform duration-200" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* Información adicional */}
+      <div className="mt-12 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+        <div className="flex items-start space-x-4">
+          <div className="bg-blue-100 p-3 rounded-lg">
+            <Mail className="h-6 w-6 text-blue-600" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Sistema de Correos Integrado
+            </h3>
+            <p className="text-gray-700 mb-4">
+              Nuestro sistema de correos te permite enviar comunicaciones personalizadas 
+              a estudiantes de manera masiva o individual, con plantillas HTML personalizables 
+              y adjuntos de certificados.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-gray-700">Envío por lotes configurable</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-gray-700">Plantillas HTML personalizables</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-gray-700">Adjuntos de certificados automáticos</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

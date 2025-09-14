@@ -403,3 +403,126 @@ export async function marcarInscripcionCompletada(inscripcionId: string) {
 export async function desactivarInscripcion(inscripcionId: string) {
   return cursosApi.delete(`/inscripciones/${inscripcionId}`);
 }
+
+// ==================== FUNCIONES DE CORREOS ====================
+
+// Plantillas de Email
+export const getPlantillasEmail = async () => {
+  const session = await getSession();
+  const response = await fetch(`${CERTIFICADOS_SERVICE_URL}/plantillas-email`, {
+    headers: {
+      Authorization: `Bearer ${session?.accessToken}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) throw new Error("Error al obtener plantillas de email");
+  return response.json();
+};
+
+export const getPlantillaEmail = async (id: string) => {
+  const session = await getSession();
+  const response = await fetch(`${CERTIFICADOS_SERVICE_URL}/plantillas-email/${id}`, {
+    headers: {
+      Authorization: `Bearer ${session?.accessToken}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) throw new Error("Error al obtener plantilla de email");
+  return response.json();
+};
+
+export const createPlantillaEmail = async (data: any) => {
+  const session = await getSession();
+  const response = await fetch(`${CERTIFICADOS_SERVICE_URL}/plantillas-email`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${session?.accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error("Error al crear plantilla de email");
+  return response.json();
+};
+
+export const updatePlantillaEmail = async (id: string, data: any) => {
+  const session = await getSession();
+  const response = await fetch(`${CERTIFICADOS_SERVICE_URL}/plantillas-email/${id}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${session?.accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error("Error al actualizar plantilla de email");
+  return response.json();
+};
+
+export const deletePlantillaEmail = async (id: string) => {
+  const session = await getSession();
+  const response = await fetch(`${CERTIFICADOS_SERVICE_URL}/plantillas-email/${id}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${session?.accessToken}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) throw new Error("Error al eliminar plantilla de email");
+  return response.json();
+};
+
+// Envío de Correos
+export const enviarEmailIndividual = async (data: any) => {
+  const session = await getSession();
+  const response = await fetch(`${CERTIFICADOS_SERVICE_URL}/enviar-individual`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${session?.accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error("Error al enviar email individual");
+  return response.json();
+};
+
+export const enviarEmailMasivo = async (data: any) => {
+  const session = await getSession();
+  const response = await fetch(`${CERTIFICADOS_SERVICE_URL}/enviar-masivo`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${session?.accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error("Error al enviar emails masivos");
+  return response.json();
+};
+
+// Estadísticas y Logs
+export const getEstadisticasEmail = async () => {
+  const session = await getSession();
+  const response = await fetch(`${CERTIFICADOS_SERVICE_URL}/estadisticas-email`, {
+    headers: {
+      Authorization: `Bearer ${session?.accessToken}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) throw new Error("Error al obtener estadísticas de email");
+  return response.json();
+};
+
+export const getLogsEmail = async (params?: any) => {
+  const session = await getSession();
+  const queryParams = new URLSearchParams(params).toString();
+  const response = await fetch(`${CERTIFICADOS_SERVICE_URL}/logs-email?${queryParams}`, {
+    headers: {
+      Authorization: `Bearer ${session?.accessToken}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) throw new Error("Error al obtener logs de email");
+  return response.json();
+};

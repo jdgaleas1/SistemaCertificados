@@ -25,6 +25,9 @@ services:
       - SECRET_KEY=clave-secreta-desarrollo
       - DEBUG=True
       - SMTP2GO_API_KEY=${SMTP2GO_API_KEY}
+      - SMTP2GO_SENDER_EMAIL=${SMTP2GO_SENDER_EMAIL}
+      - SMTP2GO_LOTE_SIZE=${SMTP2GO_LOTE_SIZE}
+      - SMTP2GO_PAUSA_LOTES=${SMTP2GO_PAUSA_LOTES}
     depends_on: [postgres]
 
   postgres:

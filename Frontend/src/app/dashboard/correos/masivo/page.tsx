@@ -104,7 +104,13 @@ export default function EnvioMasivoPage() {
         tiempoInicio: Date.now()
       });
 
-      const destinatariosIds = estudiantes?.estudiantes?.map(estudiante => estudiante.id) || [];
+      const destinatariosIds = estudiantes?.estudiantes
+        ?.map(estudiante => estudiante.id)
+        ?.filter(id => id !== undefined && id !== null) || [];
+      
+      if (destinatariosIds.length === 0) {
+        throw new Error('No hay destinatarios válidos para enviar');
+      }
       
       const resultado = await enviarEmailMasivo({
         plantilla_email_id: plantillaEmailSeleccionada,
@@ -362,9 +368,9 @@ export default function EnvioMasivoPage() {
 
                 <div className="max-h-64 overflow-y-auto">
                   <div className="space-y-2">
-                    {estudiantes?.estudiantes?.map((estudiante) => (
+                    {estudiantes?.estudiantes?.map((estudiante, index) => (
                       <div
-                        key={estudiante.id}
+                        key={estudiante.id || `estudiante-${index}`}
                         className="flex items-center justify-between p-3 bg-gray-50 rounded-md"
                       >
                         <div>

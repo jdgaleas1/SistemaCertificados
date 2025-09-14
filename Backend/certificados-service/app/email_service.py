@@ -68,8 +68,14 @@ class EmailService:
             # Si hay imagen de fondo, agregarla
             if plantilla.background_image_url:
                 try:
+                    # Corregir URL si es localhost (problema en Docker)
+                    image_url = plantilla.background_image_url
+                    if "localhost:8003" in image_url:
+                        # En Docker, usar el nombre del servicio
+                        image_url = image_url.replace("localhost:8003", "certificados-service:8000")
+                    
                     # Descargar imagen de fondo
-                    response = requests.get(plantilla.background_image_url, timeout=10)
+                    response = requests.get(image_url, timeout=10)
                     if response.status_code == 200:
                         img_buffer = BytesIO(response.content)
                         
@@ -102,7 +108,10 @@ class EmailService:
             # Si no hay imagen de fondo o falló, crear PDF básico
             c = canvas.Canvas(buffer, pagesize=landscape(A4))
             c.setFont("Helvetica-Bold", 24)
-            c.drawCentredText(pdf_width/2, pdf_height/2, f"Certificado para {variables.get('NOMBRE', '')} {variables.get('APELLIDO', '')}")
+            # Calcular posición centrada manualmente
+            text = f"Certificado para {variables.get('NOMBRE', '')} {variables.get('APELLIDO', '')}"
+            text_width = c.stringWidth(text, "Helvetica-Bold", 24)
+            c.drawString((pdf_width - text_width) / 2, pdf_height/2, text)
             c.save()
             
             buffer.seek(0)
@@ -114,7 +123,11 @@ class EmailService:
             buffer = BytesIO()
             c = canvas.Canvas(buffer, pagesize=landscape(A4))
             c.setFont("Helvetica", 16)
-            c.drawCentredText(landscape(A4)[0]/2, landscape(A4)[1]/2, "Certificado CDP")
+            # Calcular posición centrada manualmente
+            text = "Certificado CDP"
+            text_width = c.stringWidth(text, "Helvetica", 16)
+            pdf_width, pdf_height = landscape(A4)
+            c.drawString((pdf_width - text_width) / 2, pdf_height/2, text)
             c.save()
             buffer.seek(0)
             return buffer.getvalue()
@@ -159,7 +172,9 @@ class EmailService:
             # Alineación
             align = field.get("align", "left")
             if align == "center":
-                canvas_obj.drawCentredText(x, y, texto)
+                # Calcular posición centrada manualmente
+                text_width = canvas_obj.stringWidth(texto, font_name, font_size)
+                canvas_obj.drawString(x - text_width/2, y, texto)
             elif align == "right":
                 canvas_obj.drawRightString(x, y, texto)
             else:

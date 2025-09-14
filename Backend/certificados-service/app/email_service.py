@@ -331,13 +331,17 @@ class EmailService:
             pausa_individual = configuracion_lotes.get("pausa_individual", pausa_individual)
         
         # Obtener plantilla de email
+        print(f"🔍 Buscando plantilla de email con ID: {plantilla_email_id}")
         plantilla_email = self.db.query(PlantillaEmail).filter(
             PlantillaEmail.id == plantilla_email_id,
             PlantillaEmail.is_active == True
         ).first()
         
         if not plantilla_email:
+            print(f"❌ Plantilla de email no encontrada para ID: {plantilla_email_id}")
             raise ValueError("Plantilla de email no encontrada")
+        
+        print(f"✅ Plantilla encontrada: {plantilla_email.nombre} - Asunto: {plantilla_email.asunto}")
         
         # Obtener destinatarios
         usuarios = self.db.query(Usuario).filter(
@@ -387,6 +391,11 @@ class EmailService:
                     # Procesar asunto y contenido
                     asunto_procesado = self.procesar_variables(plantilla_email.asunto, variables)
                     contenido_procesado = self.procesar_variables(plantilla_email.contenido_html, variables)
+                    
+                    print(f"📧 Procesando email para {usuario.email}:")
+                    print(f"   Asunto original: {plantilla_email.asunto}")
+                    print(f"   Asunto procesado: {asunto_procesado}")
+                    print(f"   Contenido HTML (primeros 100 chars): {plantilla_email.contenido_html[:100]}...")
                     
                     # Crear datos de envío
                     envio_data = EnvioEmailIndividual(

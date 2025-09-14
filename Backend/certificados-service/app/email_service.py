@@ -83,9 +83,17 @@ class EmailService:
                         c = canvas.Canvas(buffer, pagesize=landscape(A4))
                         
                         # Agregar imagen de fondo
-                        # ReportLab necesita que el buffer esté en la posición 0
+                        # Convertir BytesIO a objeto de imagen PIL y luego a ReportLab
                         img_buffer.seek(0)
-                        c.drawImage(img_buffer, 0, 0, width=pdf_width, height=pdf_height)
+                        pil_image = Image.open(img_buffer)
+                        
+                        # Guardar imagen temporalmente para ReportLab
+                        temp_img_buffer = BytesIO()
+                        pil_image.save(temp_img_buffer, format='PNG')
+                        temp_img_buffer.seek(0)
+                        
+                        # Dibujar imagen de fondo usando el buffer temporal
+                        c.drawImage(temp_img_buffer, 0, 0, width=pdf_width, height=pdf_height)
                         
                         # Procesar campos de la plantilla
                         if plantilla.fields_json:

@@ -1,5 +1,5 @@
 # app/schemas.py - CERTIFICADOS SERVICE
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Any, Dict
 from datetime import datetime
 from uuid import UUID
@@ -92,12 +92,13 @@ class LogEmailResponse(BaseModel):
 # ==================== ENVÍO DE CORREOS ====================
 
 class EnvioEmailIndividual(BaseModel):
-    destinatario_email: EmailStr
+    destinatario_email: str   
     destinatario_nombre: Optional[str] = None
     asunto: str = Field(..., min_length=5, max_length=255)
     contenido_html: str = Field(..., min_length=50)
     plantilla_certificado_id: Optional[UUID] = None
     variables: Optional[Dict[str, str]] = None
+
 
 class EnvioMasivoRequest(BaseModel):
     plantilla_email_id: UUID

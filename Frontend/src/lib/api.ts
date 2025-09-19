@@ -557,3 +557,12 @@ export const getAvailableVariables = async () => {
   if (!response.ok) throw new Error("Error al obtener variables disponibles");
   return response.json();
 };
+
+// Añadir estas funciones al final del archivo
+export async function limpiarDatosCursos(options: { limpiar_inscripciones: boolean, limpiar_cursos: boolean }) {
+  return cursosApi.post('/admin/limpiar-datos', options);
+}
+
+export async function limpiarEstudiantes() {
+  return api.post('/admin/limpiar-estudiantes');
+}

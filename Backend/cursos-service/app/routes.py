@@ -284,7 +284,41 @@ def get_estudiantes_curso(
         "estudiantes": estudiantes
     }
 
-# Backend/cursos-service/app/routes.py - ENDPOINT REEMPLAZADO
+@router.post("/admin/limpiar-datos")
+def limpiar_datos(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_admin_user)
+):
+    """Limpiar datos del sistema (solo administradores)"""
+    
+    try:
+        # 1. Desactivar inscripciones
+        inscripciones_count = db.query(Inscripcion).filter(Inscripcion.is_active == True).update(
+            {"is_active": False}, synchronize_session=False
+        )
+        
+        # 2. Desactivar cursos (excepto los predeterminados si existen)
+        cursos_count = db.query(Curso).filter(Curso.is_active == True).update(
+            {"is_active": False}, synchronize_session=False
+        )
+        
+        # Commit los cambios
+        db.commit()
+        
+        # 3. Para usuarios, necesitamos llamar al servicio de usuarios
+        # Esto se manejará desde el frontend para mantener la separación de servicios
+        
+        return {
+            "message": "Limpieza de datos completada",
+            "inscripciones_desactivadas": inscripciones_count,
+            "cursos_desactivados": cursos_count
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error al limpiar datos: {str(e)}"
+        )
 
 @router.post("/inscripciones/xlsx", response_model=CSVImportResponse)
 async def import_xlsx_estructura_cdp(

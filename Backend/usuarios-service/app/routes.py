@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
 from app.models import Usuario
-from app.schemas import UsuarioCreate, UsuarioUpdate, UsuarioResponse, UsuarioLogin, Token, TokenRefresh, PasswordChange
+from app.schemas import UsuarioCreate, UsuarioUpdate, UsuarioResponse, UsuarioLogin, Token, TokenRefresh, PasswordChange, RolUsuario
 from app.auth import verify_password, get_password_hash, create_access_token, create_refresh_token, verify_token
 from app.dependencies import get_current_user, get_admin_user
 
@@ -256,3 +256,30 @@ def change_user_password(
 def health_check():
     """Health check del servicio"""
     return {"status": "healthy", "service": "usuarios-service"}
+
+@router.post("/admin/limpiar-estudiantes")
+def limpiar_estudiantes(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_admin_user)
+):
+    """Desactivar usuarios con rol de estudiante (solo administradores)"""
+    
+    try:
+        # Desactivar estudiantes (no eliminar)
+        estudiantes_count = db.query(Usuario).filter(
+            Usuario.rol == RolUsuario.ESTUDIANTE,
+            Usuario.is_active == True
+        ).update({"is_active": False}, synchronize_session=False)
+        
+        db.commit()
+        
+        return {
+            "message": "Limpieza de estudiantes completada",
+            "estudiantes_desactivados": estudiantes_count
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error al limpiar estudiantes: {str(e)}"
+        )

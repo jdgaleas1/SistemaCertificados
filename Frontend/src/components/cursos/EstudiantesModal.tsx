@@ -41,21 +41,22 @@ export default function EstudiantesModal({
     setError(null);
     try {
       const response = await cursosApi.get(`/cursos/${cursoId}/estudiantes`);
-      console.log("Respuesta API estudiantes:", response.data);
       
-      // Corregir cómo se accede a los datos de la respuesta
-      if (response.data && Array.isArray(response.data.estudiantes)) {
+      // Log the entire response object to debug
+      console.log("Respuesta API completa:", response);
+      
+      // Check if the data is in the expected format
+      if (response && response.data && Array.isArray(response.data.estudiantes)) {
         setEstudiantes(response.data.estudiantes);
-      } else if (response.data && Array.isArray(response.data)) {
-        // Si la respuesta es un array directamente
-        setEstudiantes(response.data);
+      } else if (response && Array.isArray(response)) {
+        // Sometimes the API client might unwrap the response
+        setEstudiantes(response);
+      } else if (response && Array.isArray(response.estudiantes)) {
+        // Another possible structure
+        setEstudiantes(response.estudiantes);
       } else {
-        // Si la estructura es diferente, intentar extraer estudiantes
-        const estudiantesData = response.data?.estudiantes || 
-                               response.data?.data?.estudiantes || 
-                               response.data?.data || 
-                               [];
-        setEstudiantes(estudiantesData);
+        console.error("Estructura de respuesta inesperada:", response);
+        setEstudiantes([]);
       }
     } catch (err) {
       console.error("Error al cargar estudiantes:", err);

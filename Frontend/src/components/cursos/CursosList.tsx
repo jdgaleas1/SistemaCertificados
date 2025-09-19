@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { Card, Heading, Text, Badge, Button, Flex } from "@radix-ui/themes";
 import EstudiantesModal from "@/components/cursos/EstudiantesModal";
+import LimpiarDatosModal from "@/components/admin/LimpiarDatosModal";
 
 import {
   Edit,
@@ -14,6 +15,7 @@ import {
   Calendar,
   Plus,
   Eye,
+  Database,
 } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { useSession } from "next-auth/react";
@@ -29,6 +31,11 @@ export default function CursosList() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedCurso, setSelectedCurso] = useState<Curso | null>(null);
+  const [limpiarDatosModalOpen, setLimpiarDatosModalOpen] = useState(false);
+
+  // Estados para el modal de estudiantes
+  const [estudiantesModalOpen, setEstudiantesModalOpen] = useState(false);
+  const [cursoSeleccionado, setCursoSeleccionado] = useState<Curso | null>(null);
 
   // Memoize filters to avoid creating a new object each render,
   // which was causing the hook effect to refetch continuously.
@@ -82,9 +89,7 @@ export default function CursosList() {
     setDeleteModalOpen(false);
     setSelectedCurso(null);
   };
-  // Asegúrate de que estos estados estén definidos correctamente
-  const [estudiantesModalOpen, setEstudiantesModalOpen] = useState(false);
-  const [cursoSeleccionado, setCursoSeleccionado] = useState<Curso | null>(null);
+
   const getStatsData = () => {
     const total = cursos.length;
     const conFechas = cursos.filter((c) => c.fecha_inicio && c.fecha_fin).length;
@@ -197,18 +202,18 @@ export default function CursosList() {
               <Edit size={14} />
             </Button>
             <Button
-    size="1"
-    variant="soft"
-    color="blue"
-    onClick={() => {
-      setCursoSeleccionado(row.original);
-      setEstudiantesModalOpen(true);
-    }}
-    className="cursor-pointer"
-    title="Ver estudiantes"
-  >
-    <Users size={14} />
-  </Button>
+              size="1"
+              variant="soft"
+              color="blue"
+              onClick={() => {
+                setCursoSeleccionado(row.original);
+                setEstudiantesModalOpen(true);
+              }}
+              className="cursor-pointer"
+              title="Ver estudiantes"
+            >
+              <Users size={14} />
+            </Button>
             {session?.user?.role === "ADMIN" && (
               <Button
                 size="1"
@@ -293,6 +298,7 @@ export default function CursosList() {
         )}
       </div>
 
+      
       {/* Cursos Table */}
       <Card>
         <div className="p-6">
@@ -311,6 +317,19 @@ export default function CursosList() {
                 />
                 Actualizar
               </Button>
+              
+              {session?.user?.role === "ADMIN" && (
+                <Button
+                  onClick={() => setLimpiarDatosModalOpen(true)}
+                  variant="soft"
+                  color="red"
+                  className="cursor-pointer"
+                >
+                  <Database size={16} />
+                  Limpiar Datos
+                </Button>
+              )}
+              
               {(session?.user?.role === "ADMIN" || session?.user?.role === "PROFESOR") && (
                 <Button
                   onClick={() => setCreateModalOpen(true)}
@@ -367,13 +386,21 @@ export default function CursosList() {
         onClose={handleModalClose}
         onConfirm={handleConfirmDelete}
       />
-        // Asegúrate de que el modal esté correctamente configurado al final del componente
-        <EstudiantesModal
-          cursoId={cursoSeleccionado?.id || ""}
-          cursoNombre={cursoSeleccionado?.nombre || ""}
-          open={estudiantesModalOpen}
-          onOpenChange={setEstudiantesModalOpen}
-        />
+
+      <EstudiantesModal
+        cursoId={cursoSeleccionado?.id || ""}
+        cursoNombre={cursoSeleccionado?.nombre || ""}
+        open={estudiantesModalOpen}
+        onOpenChange={setEstudiantesModalOpen}
+      />
+      
+      <LimpiarDatosModal
+        open={limpiarDatosModalOpen}
+        onOpenChange={setLimpiarDatosModalOpen}
+        onSuccess={() => {
+          refetch();
+        }}
+      />
     </div>
   );
 }

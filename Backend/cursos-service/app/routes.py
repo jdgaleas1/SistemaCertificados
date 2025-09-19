@@ -446,11 +446,17 @@ async def import_xlsx_estructura_cdp(
                         # Crear nuevo curso
                         curso = Curso(
                             nombre=curso_nombre,
-                            instructor_id=instructor_id
+                            instructor_id=instructor_id,
+                            is_active=True  # Asegurar que esté activo
                         )
                         db.add(curso)
                         db.flush()  # Para obtener el ID
                         cursos_creados += 1
+                    else:
+                        # NUEVO: Reactivar curso si estaba desactivado
+                        if not curso.is_active:
+                            curso.is_active = True
+                            print(f"🔄 Reactivando curso: {curso.nombre}")
                     
                     cursos_cache[curso_key] = curso.id
                 
@@ -481,6 +487,7 @@ async def import_xlsx_estructura_cdp(
                     estudiante.nombre = nombres
                     estudiante.apellido = apellidos
                     estudiante.cedula = cedula
+                    estudiante.is_active = True  # ← AGREGAR ESTA LÍNEA
                     db.flush()
                 
                 estudiante_id = estudiante.id

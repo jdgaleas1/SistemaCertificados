@@ -12,6 +12,7 @@ import {
   Plus,
   Upload,
   Award,
+  Database,
 } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { useSession } from "next-auth/react";
@@ -20,12 +21,14 @@ import { useInscripciones } from "@/hooks/useInscripciones";
 import { InscripcionDetallada } from "@/types/cursos";
 import InscripcionModal from "./InscripcionModal";
 import ImportCSVModal from "./ImportXLSXModal";
+import LimpiarDatosModal from "@/components/admin/LimpiarDatosModal";
 
 export default function InscripcionesList() {
   const { data: session } = useSession();
   const [selectedInscripcion, setSelectedInscripcion] = useState<InscripcionDetallada | null>(null);
   const [inscripcionModalOpen, setInscripcionModalOpen] = useState(false);
   const [importCSVModalOpen, setImportCSVModalOpen] = useState(false);
+  const [limpiarDatosModalOpen, setLimpiarDatosModalOpen] = useState(false);
 
   const {
     inscripciones,
@@ -288,6 +291,19 @@ export default function InscripcionesList() {
                 />
                 Actualizar
               </Button>
+              
+              {session?.user?.role === "ADMIN" && (
+                <Button
+                  onClick={() => setLimpiarDatosModalOpen(true)}
+                  variant="soft"
+                  color="red"
+                  className="cursor-pointer"
+                >
+                  <Database size={16} />
+                  Limpiar Datos
+                </Button>
+              )}
+              
               {(session?.user?.role === "ADMIN" || session?.user?.role === "PROFESOR") && (
                 <>
                   <Button
@@ -348,6 +364,14 @@ export default function InscripcionesList() {
         open={importCSVModalOpen}
         onClose={() => setImportCSVModalOpen(false)}
         onImport={handleImportXLSX}
+      />
+
+      <LimpiarDatosModal
+        open={limpiarDatosModalOpen}
+        onOpenChange={setLimpiarDatosModalOpen}
+        onSuccess={() => {
+          refetch();
+        }}
       />
     </div>
   );

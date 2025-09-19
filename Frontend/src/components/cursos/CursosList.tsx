@@ -3,7 +3,6 @@
 import { useState, useMemo } from "react";
 import { Card, Heading, Text, Badge, Button, Flex } from "@radix-ui/themes";
 import EstudiantesModal from "@/components/cursos/EstudiantesModal";
-import LimpiarDatosModal from "@/components/admin/LimpiarDatosModal";
 
 import {
   Edit,
@@ -15,7 +14,6 @@ import {
   Calendar,
   Plus,
   Eye,
-  Database,
 } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { useSession } from "next-auth/react";
@@ -31,19 +29,15 @@ export default function CursosList() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedCurso, setSelectedCurso] = useState<Curso | null>(null);
-  const [limpiarDatosModalOpen, setLimpiarDatosModalOpen] = useState(false);
 
   // Estados para el modal de estudiantes
   const [estudiantesModalOpen, setEstudiantesModalOpen] = useState(false);
   const [cursoSeleccionado, setCursoSeleccionado] = useState<Curso | null>(null);
 
-  // Memoize filters to avoid creating a new object each render,
-  // which was causing the hook effect to refetch continuously.
-  const cursosFilters = useMemo(() => ({
-    limit: 25,
-    activos: true,
-  }), []);
-
+const cursosFilters = useMemo(() => ({
+  limit: 25,
+  // Removed activos: true to show all courses
+}), []);
   const {
     cursos,
     loading,
@@ -318,18 +312,6 @@ export default function CursosList() {
                 Actualizar
               </Button>
               
-              {session?.user?.role === "ADMIN" && (
-                <Button
-                  onClick={() => setLimpiarDatosModalOpen(true)}
-                  variant="soft"
-                  color="red"
-                  className="cursor-pointer"
-                >
-                  <Database size={16} />
-                  Limpiar Datos
-                </Button>
-              )}
-              
               {(session?.user?.role === "ADMIN" || session?.user?.role === "PROFESOR") && (
                 <Button
                   onClick={() => setCreateModalOpen(true)}
@@ -392,14 +374,6 @@ export default function CursosList() {
         cursoNombre={cursoSeleccionado?.nombre || ""}
         open={estudiantesModalOpen}
         onOpenChange={setEstudiantesModalOpen}
-      />
-      
-      <LimpiarDatosModal
-        open={limpiarDatosModalOpen}
-        onOpenChange={setLimpiarDatosModalOpen}
-        onSuccess={() => {
-          refetch();
-        }}
       />
     </div>
   );

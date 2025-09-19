@@ -2,6 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { Card, Heading, Text, Badge, Button, Flex } from "@radix-ui/themes";
+import EstudiantesModal from "@/components/cursos/EstudiantesModal";
+
 import {
   Edit,
   Trash2,
@@ -80,7 +82,9 @@ export default function CursosList() {
     setDeleteModalOpen(false);
     setSelectedCurso(null);
   };
-
+  // Asegúrate de que estos estados estén definidos correctamente
+  const [estudiantesModalOpen, setEstudiantesModalOpen] = useState(false);
+  const [cursoSeleccionado, setCursoSeleccionado] = useState<Curso | null>(null);
   const getStatsData = () => {
     const total = cursos.length;
     const conFechas = cursos.filter((c) => c.fecha_inicio && c.fecha_fin).length;
@@ -193,14 +197,18 @@ export default function CursosList() {
               <Edit size={14} />
             </Button>
             <Button
-              size="1"
-              variant="soft"
-              color="blue"
-              className="cursor-pointer"
-              title="Ver estudiantes"
-            >
-              <Users size={14} />
-            </Button>
+    size="1"
+    variant="soft"
+    color="blue"
+    onClick={() => {
+      setCursoSeleccionado(row.original);
+      setEstudiantesModalOpen(true);
+    }}
+    className="cursor-pointer"
+    title="Ver estudiantes"
+  >
+    <Users size={14} />
+  </Button>
             {session?.user?.role === "ADMIN" && (
               <Button
                 size="1"
@@ -359,6 +367,13 @@ export default function CursosList() {
         onClose={handleModalClose}
         onConfirm={handleConfirmDelete}
       />
+        // Asegúrate de que el modal esté correctamente configurado al final del componente
+        <EstudiantesModal
+          cursoId={cursoSeleccionado?.id || ""}
+          cursoNombre={cursoSeleccionado?.nombre || ""}
+          open={estudiantesModalOpen}
+          onOpenChange={setEstudiantesModalOpen}
+        />
     </div>
   );
 }

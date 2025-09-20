@@ -69,11 +69,16 @@ def create_template(
     """Crear nueva plantilla de certificado"""
     
     try:
+        # Validar que el canvas tenga dimensiones
+        canvas_data = data.canvas or {"width": 1600, "height": 1131}
+        if "width" not in canvas_data or "height" not in canvas_data:
+            canvas_data.update({"width": 1600, "height": 1131})
+        
         plantilla = Plantilla(
             nombre=data.nombre,
             descripcion=data.descripcion,
             background_image_url=data.background_image_url,
-            canvas_json=json.dumps(data.canvas) if data.canvas is not None else None,
+            canvas_json=json.dumps(canvas_data),
             fields_json=json.dumps(data.fields) if data.fields is not None else None,
         )
         

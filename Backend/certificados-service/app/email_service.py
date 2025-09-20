@@ -109,8 +109,18 @@ class EmailService:
                             canvas_config = json.loads(plantilla.canvas_json) if plantilla.canvas_json else {"width": 1600, "height": 1131}
                             
                             # Escalas para convertir coordenadas del canvas al PDF
-                            scale_x = pdf_width / canvas_config.get("width", 1600)
-                            scale_y = pdf_height / canvas_config.get("height", 1131)
+                            # Obtener dimensiones del canvas original
+                            canvas_width = canvas_config.get("width", 1600)
+                            canvas_height = canvas_config.get("height", 1131)
+
+                            # Calcular escalas manteniendo proporción
+                            # IMPORTANTE: Usar las dimensiones reales del PDF
+                            scale_x = pdf_width / canvas_width
+                            scale_y = pdf_height / canvas_height
+
+                            print(f"  📐 Dimensiones Canvas: {canvas_width}x{canvas_height}")
+                            print(f"  📐 Dimensiones PDF: {pdf_width}x{pdf_height}")
+                            print(f"  📐 Escalas: x={scale_x:.3f}, y={scale_y:.3f}")
                             
                             for field in fields:
                                 if field.get("type") == "text":
@@ -155,7 +165,7 @@ class EmailService:
             return buffer.getvalue()
     
     def _agregar_texto_pdf(self, canvas_obj, field: Dict, variables: Dict[str, str], 
-                          scale_x: float, scale_y: float, pdf_height: float):
+                        scale_x: float, scale_y: float, pdf_height: float):
         """
         Agrega texto al PDF basado en la configuración del campo
         """
@@ -168,38 +178,52 @@ class EmailService:
             if not texto.strip():
                 return
             
-            # Coordenadas escaladas (invertir Y para PDF)
-            x = field.get("x", 0) * scale_x
-            y = pdf_height - (field.get("y", 0) * scale_y)
+            # Obtener coordenadas originales del canvas
+            canvas_x = field.get("x", 0)
+            canvas_y = field.get("y", 0)
+            
+            # CORREGIR: Conversión de coordenadas Konva -> PDF
+            # Konva: origen superior izquierda, Y hacia abajo
+            # PDF: origen inferior izquierda, Y hacia arriba
+            
+            # Escalar coordenadas
+            x = canvas_x * scale_x
+            # IMPORTANTE: Invertir Y correctamente
+            y = pdf_height - (canvas_y * scale_y)
             
             # Configurar fuente
             font_size = field.get("fontSize", 12) * min(scale_x, scale_y)
             font_family = field.get("fontFamily", "Helvetica")
             font_style = field.get("fontStyle", "normal")
             
-            # Mapear fuentes
-            if font_family.lower() in ["times", "times new roman"]:
-                font_name = "Times-Roman" if font_style != "bold" else "Times-Bold"
-            elif font_family.lower() == "courier":
-                font_name = "Courier" if font_style != "bold" else "Courier-Bold"
-            else:
-                font_name = "Helvetica" if font_style != "bold" else "Helvetica-Bold"
+            # Mapear fuentes de manera más robusta
+            font_map = {
+                "times": {"normal": "Times-Roman", "bold": "Times-Bold"},
+                "times new roman": {"normal": "Times-Roman", "bold": "Times-Bold"},
+                "courier": {"normal": "Courier", "bold": "Courier-Bold"},
+                "helvetica": {"normal": "Helvetica", "bold": "Helvetica-Bold"}
+            }
+            
+            font_key = font_family.lower()
+            style_key = "bold" if "bold" in font_style.lower() else "normal"
+            font_name = font_map.get(font_key, font_map["helvetica"])[style_key]
             
             canvas_obj.setFont(font_name, font_size)
             
             # Color del texto
             fill_color = field.get("fill", "#000000")
-            if fill_color.startswith("#"):
-                # Convertir hex a RGB
-                r = int(fill_color[1:3], 16) / 255
-                g = int(fill_color[3:5], 16) / 255
-                b = int(fill_color[5:7], 16) / 255
-                canvas_obj.setFillColorRGB(r, g, b)
+            if fill_color.startswith("#") and len(fill_color) == 7:
+                try:
+                    r = int(fill_color[1:3], 16) / 255
+                    g = int(fill_color[3:5], 16) / 255
+                    b = int(fill_color[5:7], 16) / 255
+                    canvas_obj.setFillColorRGB(r, g, b)
+                except ValueError:
+                    canvas_obj.setFillColorRGB(0, 0, 0)  # Negro por defecto
             
             # Alineación
             align = field.get("align", "left")
             if align == "center":
-                # Calcular posición centrada manualmente
                 text_width = canvas_obj.stringWidth(texto, font_name, font_size)
                 canvas_obj.drawString(x - text_width/2, y, texto)
             elif align == "right":
@@ -207,10 +231,12 @@ class EmailService:
             else:
                 canvas_obj.drawString(x, y, texto)
             
-            # Log para debugging
-            if texto_original != texto:
-                print(f"  📝 Texto procesado: '{texto_original}' -> '{texto}'")
-                
+            # Debug info
+            print(f"  📝 Texto agregado: '{texto}' en ({x:.1f}, {y:.1f})")
+            print(f"     Canvas original: ({canvas_x}, {canvas_y})")
+            print(f"     Escala: x={scale_x:.3f}, y={scale_y:.3f}")
+            print(f"     PDF Height: {pdf_height}")
+                    
         except Exception as e:
             print(f"Error agregando texto al PDF: {e}")
             print(f"  Campo: {field}")

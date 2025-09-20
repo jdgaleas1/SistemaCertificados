@@ -213,7 +213,16 @@ export default function CanvasEditor({
                     onTap={() => setSelectedId(el.id)}
                     onDragEnd={(e) => {
                       const { x, y } = e.target.position();
-                      setElements((prev: any[]) => prev.map((p) => (p.id === el.id ? { ...p, x, y } : p)));
+                      setElements((prev: any[]) => prev.map((p) => (
+                        p.id === el.id ? { 
+                          ...p, 
+                          x, 
+                          y,
+                          // Agregar info del canvas para conversión
+                          canvasWidth: canvasSize.width,
+                          canvasHeight: canvasSize.height 
+                        } : p
+                      )));
                     }}
                   />
                 );
